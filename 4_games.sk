@@ -8,7 +8,7 @@ options:
 
     color: hex "2F3136"
 
-# test to see smth eeee 
+# test to see smth eeee e
 
 on load:
     set {_c} to newSlash("games", "Epic games here!")
