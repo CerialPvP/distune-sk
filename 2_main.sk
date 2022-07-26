@@ -15,10 +15,10 @@ define new bot named {@bot}:
 	auto reconnect: true
 	compression: none
 	on guild ready:
-		send "&b[DisTune] Server %event-guild% has been loaded."
+		send "&b[DisTune] Server %event-guild% has been loaded." to console
 	
 	on ready:
-		send "&b[DisTune] DisTune is ready. Discord tag: %event-bot%"
+		send "&b[DisTune] DisTune is ready. Discord tag: %event-bot%" to console
 
 	
 
@@ -51,7 +51,8 @@ every 1 second:
 		delete {uptime::h}
 		add 1 to {uptime::d}
 
-on load:
+function updatePresence():
+	wait 10 ticks
 	set presence of bot {@bot} to watching "%size of all guilds of bot named "DisTune"% servers | /help"
 
 on skript unload:
