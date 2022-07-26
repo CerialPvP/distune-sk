@@ -1,0 +1,484 @@
+options:
+	bot: "DisTune"
+
+	footerText: "DisTune - A powerful Discord bot of your dreams."
+	icon: "https://cdn.discordapp.com/attachments/809401069489750057/947037864120680458/distune-new.png"
+
+	color: hex "2F3136"
+
+on load:
+	set {_c} to newSlash("applications", "Manage the applications system on your server.")
+
+	set {_apps::create} to newSubCmd_Slash("create", "Creates an application.")
+	newOption_Slash({_apps::create}, "name", "The name of the application you want to make. Make sure to keep it simple.")
+
+	set {_apps::edit} to newSubCmd_Slash("edit", "Edits an existing application.")
+
+	add {_apps::*} to sub commands of {_c}
+
+	addSlash_Local({_c}, "applications")
+
+import:
+	java.lang.System
+
+on slash command:
+	event-string = "applications/create"
+
+	if hasPermission(event-member, (administrator)) = false:
+		make embed:
+			set title of the embed to "Error!"
+			set description of the embed to "You don't have permission to access this command. You need `administrator` to use this command."
+			set embed color of the embed to red
+		reply with hidden last embed
+		stop
+
+	set {_n} to argument "name" as string
+
+	if length of {_n} > 21:
+		make embed:
+			set title of the embed to "Error!"
+			set description of the embed to "Please set the application name to something shorter."
+			set embed color of the embed to red
+		reply with hidden last embed
+		stop
+
+	if file "plugins/DisTune/applicationsdata/%discord id of event-guild%/%{_n}%.yml" exists:
+		make embed:
+			set title of the embed to "Error!"
+			set description of the embed to "The application `%{_n}%` already exists. If you want to delete the applicaton:%nl%Do /applications edit > Select %{_n}% > Delete > Yes"
+			set embed color of the embed to red
+		reply with hidden last embed
+		stop
+
+	set {_files::*} to files in dir "plugins/DisTune/applicationsdata/%discord id of event-guild%"
+	if size of {_files::*} = 5:
+		make embed:
+			set title of the embed to "Error!"
+			set description of the embed to "You hit the 5 applications mark. Consider deleting some useless / non needed applications."
+			set embed color of the embed to red
+		reply with hidden last embed
+		stop
+
+	create file "plugins/DisTune/applicationsdata/%discord id of event-guild%/%{_n}%.yml"
+	# creation info
+	set yml value "creationinfo.maker" from file "plugins/DisTune/applicationsdata/%discord id of event-guild%/%{_n}%.yml" to discord id of event-member
+	set yml value "creationinfo.date" from file "plugins/DisTune/applicationsdata/%discord id of event-guild%/%{_n}%.yml" to floor(System.currentTimeMillis())
+	set yml value "creationinfo.firstname" from file "plugins/DisTune/applicationsdata/%discord id of event-guild%/%{_n}%.yml" to {_n}
+
+	# questions
+	loop 20 times:
+		set yml value "questions.%loop-number%.name" from file "plugins/DisTune/applicationsdata/%discord id of event-guild%/%{_n}%.yml" to "none"
+		set yml value "questions.%loop-number%.description" from file "plugins/DisTune/applicationsdata/%discord id of event-guild%/%{_n}%.yml" to "none"
+
+	make embed:
+		set title of the embed to "Application made successfully."
+		set description of the embed to "The application `%{_n}%` has been made. To edit the application:%nl%Do /applications edit > Select %{_n}% > Open Editor"
+		set embed color of the embed to lime
+	reply with last embed
+	stop
+
+on button click:
+	event-string = "appeditor-forceexit"
+
+	make embed:
+		set title of the embed to "Exited applications editor."
+		set description of the embed to "You have successfully exited the menu. Other people can use the application editor."
+		set embed color of the embed to lime
+	reply with hidden last embed
+	wait 1 tick
+	delete {appeditoremb::%discord id of event-member%}
+	delete {appedit.EditingApp::%discord id of event-member%::%discord id of event-guild%}
+	delete {appedit.AppEditor::%discord id of event-guild%}
+	stop
+
+
+on slash command:
+	event-string = "applications/edit"
+
+	if hasPermission(event-member, (administrator)) = false:
+		make embed:
+			set title of the embed to "Error!"
+			set description of the embed to "You don't have permission to access this command. You need `administrator` to use this command."
+			set embed color of the embed to red
+		reply with hidden last embed
+		stop
+
+	
+	else if {appedit.AppEditor::%discord id of event-guild%} is set:
+		if {appedit.AppEditor::%discord id of event-guild%} = discord id of event-member:
+			set {_row} to new components row
+			add new danger button with id "appeditor-forceexit" named "Exit Session" to components of {_row}
+			make embed:
+				set title of the embed to "Error!"
+				set description of the embed to "You're already in an editing session. You can't open a new one until you close it."
+				set embed color of the embed to red
+			reply with hidden last embed with components {_row}
+			stop
+		
+		else:
+			make embed:
+				set title of the embed to "Error!"
+				set description of the embed to "The user <@%{appedit.AppEditor::%discord id of event-guild%}%> is already editing an application. Please wait until they finish."
+				set embed color of the embed to red
+			reply with hidden last embed
+			stop
+
+	set {_dd} to new dropdown with id "appedit-mainmenu-%discord id of event-member%"
+
+	set min range of {_dd} to 1
+	set max range of {_dd} to 1
+
+	set {_files::*} to files in dir "plugins/DisTune/applicationsdata/%discord id of event-guild%"
+	if {_files::*} is not set:
+		make embed:
+			set title of the embed to "Error!"
+			set description of the embed to "This server does not have any applications. To make one, do /applications create."
+			set embed color of the embed to red
+		reply with hidden last embed
+		stop
+
+	loop files in dir "plugins/DisTune/applicationsdata/%discord id of event-guild%":
+		set {_sv::*} to split loop-value at "/"
+		replace all ".yml" in {_sv::9} with ""
+		add new option with value "appedit-%{_sv::9}%" named "%{_sv::9}%" with description "Click to open options menu." to options of {_dd}
+
+	set {_row} to new components row
+	add {_dd} to components of {_row}
+
+	make embed:
+		set title of the embed to "Applications editor - Application selector"
+		set description of the embed to "Click on the dropdown and select the application you want to edit."
+		set embed color of the embed to yellow
+	reply with last embed with components {_row} and store it in {appeditoremb::%discord id of event-member%}
+
+
+	set {appedit.AppEditor::%discord id of event-guild%} to discord id of event-member
+	stop
+
+on dropdown click:
+	event-string contains "appedit-mainmenu"
+
+	defer the interaction
+
+	if event-string doesn't contain "%discord id of event-member%":
+		make embed:
+			set title of the embed to "Error!"
+			set description of the embed to "You are not the owner of the selection menu. If you want to use this command, type `/applications edit`."
+			set embed color of the embed to red
+		reply with hidden last embed
+		stop
+
+	set {_row} to new components row
+	set {_dd} to new dropdown with id "appedit-inmenu-%discord id of event-member%"
+
+	set {_appname::*} to selected values
+	replace all "appedit-" in {_appname::1} with ""
+	set {appedit.EditingApp::%discord id of event-member%::%discord id of event-guild%} to {_appname::1}
+
+	dropdownMinMax({_dd}, 1, 1)
+
+	add new option with value "appedit-inmenu-openeditor-%{_appname::1}%" named "Open Editor" with description "Opens an editor which you can edit your application in" with emote "mouse_three_button" to options of {_dd}
+	add new option with value "appedit-inmenu-delete-%{_appname::1}%" named "Delete Application" with description "Deletes this application." with emote "wastebasket" to options of {_dd}
+	add new option with value "appedit-inmenu-back-%{_appname::1}%" named "Go Back" with description "Go back to the main menu." with emote "arrow_backward" to options of {_dd}
+	add new option with value "appedit-inmenu-exit-%{_appname::1}%" named "Exit Entirely" with description "Exit the menu entirely. This lets someone else use the editor." with emote "x" to options of {_dd}
+
+	add {_dd} to components of {_row}
+
+	set {_app::*} to selected values
+	replace all "appedit-" in {_app::1} with ""
+
+	make embed:
+		set title of the embed to "Applications editor - Editing %{_app::1}%"
+		set description of the embed to "Click on the dropdown and select an appropriate action you want to do."
+		set embed color of the embed to yellow
+	edit {appeditoremb::%discord id of event-member%} with last embed with components {_row}
+	stop
+
+on dropdown click:
+	event-string contains "appedit-inmenu"
+	if event-string doesn't contain "%discord id of event-member%":
+		make embed:
+			set title of the embed to "Error!"
+			set description of the embed to "You are not the owner of the selection menu. If you want to use this command, type `/applications edit`."
+			set embed color of the embed to red
+		reply with hidden last embed
+		stop
+
+	if "%selected values%" contains "appedit-inmenu-openeditor":
+		make embed:
+			set title of the embed to "Making editor..."
+			set description of the embed to "A text channel is being created for you. Only you and the bot can see the channel."
+			set embed color of the embed to yellow
+		edit {appeditoremb::%discord id of event-member%} with last embed
+
+		set {_channel} to new text channel action in event-guild
+		set channel name of {_channel} to "appeditor-%event-member%-%{appedit.EditingApp::%discord id of event-member%::%discord id of event-guild%}%"
+		create {_channel} and store it in {appeditor.Channel::%discord id of event-member%::%discord id of event-guild%}
+		
+		retrieve member with id "919249309508206652" in event-guild and store it in {_b}
+
+		add (view channel) to permissions of {_b} in {appeditor.Channel::%discord id of event-member%::%discord id of event-guild%}
+		add (view channel) to permissions of event-member in {appeditor.Channel::%discord id of event-member%::%discord id of event-guild%}
+		remove (view channel) from permissions of everyone role of event-guild in {appeditor.Channel::%discord id of event-member%::%discord id of event-guild%}
+
+		add "No commands have been executed yet. Please run a command from the list above to list it here." to {appeditor.CommandLog::%discord id of event-member%::%discord id of event-guild%::*}
+
+		make embed:
+			set title of the embed to "Application Editor"
+			set description of the embed to "**NOTE: By using DisTune's Applications feature, you agree to [these](https://github.com/CerialPvP/DisTune/blob/main/AppTerms.md) terms.**%nl%%nl%Welcome to the application editor. This channel is for editing staff applications made using DisTune's Applications feature. We are using text commands to edit your application easily. The list is below."
+			add field named "Text Commands" with value "```%nl%Question commands:%nl%%nl%create new question - Creates a new question with a name and description.%nl%edit question - Allows you to edit a question's name and description.%nl%finish editing - When you're editing a question, enter this to finish editing the question.%nl%delete question - Deletes a question.%nl%list questions - Gives you a temporary list of the questions. The list will be deleted after 10 seconds.%nl%-----------------------------------------------------------%nl%Channel commands:%nl%%nl%edit application name - Renames your application to a different name you'd like.%nl%close editor - Deletes this channel after a few seconds.%nl%```" to embed
+			add field named "Commands Log" with value "```%nl%%join {appeditor.CommandLog::%discord id of event-member%::%discord id of event-guild%::*} with nl%%nl%```" to embed
+			set embed color of the embed to yellow
+		post last embed to {appeditor.Channel::%discord id of event-member%::%discord id of event-guild%} and store it in {appeditor.ChannelEmbed::%discord id of event-member%::%discord id of event-guild%}
+
+		make embed:
+			set title of the embed to "Editor made."
+			set description of the embed to "A text channel for editing your application has been created successfully. The channel is %mention tag of {appeditor.Channel::%discord id of event-member%::%discord id of event-guild%}%"
+			set embed color of the embed to lime
+		edit {appeditoremb::%discord id of event-member%} with last embed
+		stop
+	
+	if "%selected values%" contains "appedit-inmenu-delete":
+		set {_row} to new components row
+		add new success button with id "appedit-inmenu-deletebutton-%discord id of event-member%" named "Go Back" with emote "arrow_backward" to components of {_row}
+
+		make embed:
+			set title of the embed to "Deleted application."
+			set description of the embed to "The application `%{appedit.EditingApp::%discord id of event-member%::%discord id of event-guild%}%` has been deleted. To edit another application, use the command again."
+			set embed color of the embed to lime
+		edit {appeditoremb::%discord id of event-member%} with last embed with components {_row}
+
+		delete file "plugins/DisTune/applicationsdata/%discord id of event-guild%/%{appedit.EditingApp::%discord id of event-member%::%discord id of event-guild%}%.yml"
+		stop
+	
+	if "%selected values%" contains "appedit-inmenu-back":
+		defer the interaction
+		set {_dd} to new dropdown with id "appedit-mainmenu-%discord id of event-member%"
+
+		set min range of {_dd} to 1
+		set max range of {_dd} to 1
+
+		set {_files::*} to files in dir "plugins/DisTune/applicationsdata/%discord id of event-guild%"
+		if {_files::*} is not set:
+			make embed:
+				set title of the embed to "Error!"
+				set description of the embed to "This server does not have any applications. To make one, do /applications create."
+				set embed color of the embed to red
+			reply with hidden last embed
+			stop
+
+		loop files in dir "plugins/DisTune/applicationsdata/%discord id of event-guild%":
+			set {_sv::*} to split loop-value at "/"
+			replace all ".yml" in {_sv::9} with ""
+			add new option with value "appedit-%{_sv::9}%" named "%{_sv::9}%" with description "Click to open options menu." to options of {_dd}
+
+		set {_row} to new components row
+		add {_dd} to components of {_row}
+
+		make embed:
+			set title of the embed to "Applications editor - Application selector"
+			set description of the embed to "Click on the dropdown and select the application you want to edit."
+			set embed color of the embed to yellow
+		edit {appeditoremb::%discord id of event-member%} with last embed with components {_row}
+	
+	if "%selected values%" contains "appedit-inmenu-exit":
+		make embed:
+			set title of the embed to "Exited applications editor."
+			set description of the embed to "You have successfully exited the menu. Other people can use the application editor."
+			set embed color of the embed to lime
+		edit {appeditoremb::%discord id of event-member%} with last embed
+		wait 1 tick
+		delete {appeditor.Channel::%discord id of event-member%::%discord id of event-guild%}
+		delete {appeditor.CommandLog::%discord id of event-member%::%discord id of event-guild%::*}
+		delete {appedit.EditingApp::%discord id of event-member%::%discord id of event-guild%}
+		delete {appeditoremb::%discord id of event-member%}
+		delete {appedit.AppEditor::%discord id of event-guild%}
+		stop
+
+on button click:
+	event-string contains "appedit-inmenu-deletebutton"
+
+	if event-string doesn't contain "%discord id of event-member%":
+		make embed:
+			set title of the embed to "Error!"
+			set description of the embed to "You are not the owner of the selection menu. If you want to use this command, type `/applications edit`."
+			set embed color of the embed to red
+		reply with hidden last embed
+		stop
+	
+	set {_files::*} to files in dir "plugins/DisTune/applicationsdata/%discord id of event-guild%"
+	if {_files::*} is not set:
+		make embed:
+			set title of the embed to "Error!"
+			set description of the embed to "This server does not have any applications. Since you were in the deletion menu and that was the last (or only?) application, then DisTune exited you out of the menu."
+			set embed color of the embed to red
+		edit {appeditoremb::%discord id of event-member%} with last embed
+		wait 1 tick
+		delete {appeditor.Channel::%discord id of event-member%::%discord id of event-guild%}
+		delete {appeditor.CommandLog::%discord id of event-member%::%discord id of event-guild%::*}
+		delete {appedit.EditingApp::%discord id of event-member%::%discord id of event-guild%}
+		delete {appeditoremb::%discord id of event-member%}
+		delete {appedit.AppEditor::%discord id of event-guild%}
+		stop
+		
+
+	defer the interaction
+	set {_dd} to new dropdown with id "appedit-mainmenu-%discord id of event-member%"
+
+	set min range of {_dd} to 1
+	set max range of {_dd} to 1
+
+	set {_files::*} to files in dir "plugins/DisTune/applicationsdata/%discord id of event-guild%"
+	if {_files::*} is not set:
+		make embed:
+			set title of the embed to "Error!"
+			set description of the embed to "This server does not have any applications. To make one, do /applications create."
+			set embed color of the embed to red
+		reply with hidden last embed
+		stop
+
+	loop files in dir "plugins/DisTune/applicationsdata/%discord id of event-guild%":
+		set {_sv::*} to split loop-value at "/"
+		replace all ".yml" in {_sv::9} with ""
+		add new option with value "appedit-%{_sv::9}%" named "%{_sv::9}%" with description "Click to open options menu." to options of {_dd}
+
+	set {_row} to new components row
+	add {_dd} to components of {_row}
+
+	make embed:
+		set title of the embed to "Applications editor - Application selector"
+		set description of the embed to "Click on the dropdown and select the application you want to edit."
+		set embed color of the embed to yellow
+	edit {appeditoremb::%discord id of event-member%} with last embed with components {_row}
+
+function appeditor_embed(m: user, g: guild, nolog: boolean=false) :: embedbuilder:
+	make embed:
+		set title of the embed to "Application Editor"
+		set description of the embed to "**NOTE: By using DisTune's Applications feature, you agree to [these](https://github.com/CerialPvP/DisTune/blob/main/AppTerms.md) terms.**%nl%%nl%Welcome to the application editor. This channel is for editing staff applications made using DisTune's Applications feature. We are using text commands to edit your application easily. The list is below."
+		add field named "Text Commands" with value "```%nl%Question commands:%nl%%nl%create new question - Creates a new question with a name and description.%nl%edit question - Allows you to edit a question's name and description.%nl%finish editing - When you're editing a question, enter this to finish editing the question.%nl%delete question - Deletes a question.%nl%list questions - Gives you a temporary list of the questions. The list will be deleted after 10 seconds.%nl%-----------------------------------------------------------%nl%Channel commands:%nl%%nl%edit application name - Renames your application to a different name you'd like.%nl%close editor - Deletes this channel after a few seconds.%nl%```" to embed
+		if {_nolog} = true:
+			add field named "Commands Log" with value "```%nl%Commands Log is too long to be displayed here.%nl%```" to embed
+		else:
+			add field named "Commands Log" with value "```%nl%%join {appeditor.CommandLog::%discord id of {_m}%::%discord id of {_g}%::*} with nl%%nl%```" to embed
+		set embed color of the embed to yellow
+	return last embed
+
+on message receive:
+	#broadcast "detected message at %event-guild%"
+	event-channel = {appeditor.Channel::%discord id of event-member%::%discord id of event-guild%}
+	set {_c} to content of event-message
+	destroy event-message
+	remove "No commands have been executed yet. Please run a command from the list above to list it here." from {appeditor.CommandLog::%discord id of event-member%::%discord id of event-guild%::*}
+
+	loop {appeditor.CommandLog::%discord id of event-member%::%discord id of event-guild%::*}:
+		add length of loop-value to {_appeditorlength}
+		if {_appeditorlength} > 1024:
+			set {_nolog} to true
+			stop loop
+		
+		else:
+			set {_nolog} to false
+
+	if {appeditor.RenameApplication::%discord id of event-member%::%discord id of event-guild%} is set:
+		if content of event-message != "cancel action":
+			set {_oldname} to name of file "plugins/DisTune/applicationsdata/%discord id of event-guild%/%{appedit.EditingApp::%discord id of event-member%::%discord id of event-guild%}%.yml"
+			rename file "plugins/DisTune/applicationsdata/%discord id of event-guild%/%{appedit.EditingApp::%discord id of event-member%::%discord id of event-guild%}%.yml" to "%content of event-message%.yml"
+			add "Edited application name:%nl%- Previous application name: ""%{_oldname}%""%nl%- New application name: ""%content of event-message%""" to {appeditor.CommandLog::%discord id of event-member%::%discord id of event-guild%::*}
+			
+			edit {appeditor.ChannelEmbed::%discord id of event-member%::%discord id of event-guild%} with last embed
+			delete {appeditor.RenameApplication::%discord id of event-member%::%discord id of event-guild%}
+			stop
+		
+		else:
+			add "Application renaming cancelled." to {appeditor.CommandLog::%discord id of event-member%::%discord id of event-guild%::*}
+			edit {appeditor.ChannelEmbed::%discord id of event-member%::%discord id of event-guild%} with appeditor_embed(event-member, event-guild, {_nolog})
+			delete {appeditor.RenameApplication::%discord id of event-member%::%discord id of event-guild%}
+			stop
+	
+	if {appeditor.QuestionCreator::%discord id of event-member%::%discord id of event-guild%} is set:
+		if {appeditor.QuestionCreator::%discord id of event-member%::%discord id of event-guild%} = "qname":
+			set yml value "questions.%{appeditor.NewQNumber::%discord id of event-member%::%discord id of event-guild%}%.name" from file "plugins/DisTune/applicationsdata/%discord id of event-guild%/%{appedit.EditingApp::%discord id of event-member%::%discord id of event-guild%}%.yml" to content of event-message
+			add "Please enter the question description (example: ""It can be food, favorite TV show, ect.""). If you don't want one, type ""no description""." to {appeditor.CommandLog::%discord id of event-member%::%discord id of event-guild%::*}
+			edit {appeditor.ChannelEmbed::%discord id of event-member%::%discord id of event-guild%} with appeditor_embed(event-member, event-guild, {_nolog})
+
+			set {appeditor.QuestionCreator::%discord id of event-member%::%discord id of event-guild%} to "qdesc"
+			stop
+		
+		if {appeditor.QuestionCreator::%discord id of event-member%::%discord id of event-guild%} = "qdesc":
+			if content of event-message != "no description":
+				set {_n} to yml value "questions.%{appeditor.NewQNumber::%discord id of event-member%::%discord id of event-guild%}%.name" from file "plugins/DisTune/applicationsdata/%discord id of event-guild%/%{appedit.EditingApp::%discord id of event-member%::%discord id of event-guild%}%.yml"
+				set yml value "questions.%{appeditor.NewQNumber::%discord id of event-member%::%discord id of event-guild%}%.description" from file "plugins/DisTune/applicationsdata/%discord id of event-guild%/%{appedit.EditingApp::%discord id of event-member%::%discord id of event-guild%}%.yml" to content of event-message
+				add "Created new question:%nl%- Name: %{_n}%%nl%- Description: %content of event-message%" to {appeditor.CommandLog::%discord id of event-member%::%discord id of event-guild%::*}
+				edit {appeditor.ChannelEmbed::%discord id of event-member%::%discord id of event-guild%} with appeditor_embed(event-member, event-guild, {_nolog})
+
+				set {appeditor.QuestionCreator::%discord id of event-member%::%discord id of event-guild%} to "qdesc"
+				delete {appeditor.QuestionCreator::%discord id of event-member%::%discord id of event-guild%}
+				stop
+			
+			else:
+				set {_n} to yml value "questions.%{appeditor.NewQNumber::%discord id of event-member%::%discord id of event-guild%}%.name" from file "plugins/DisTune/applicationsdata/%discord id of event-guild%/%{appedit.EditingApp::%discord id of event-member%::%discord id of event-guild%}%.yml"
+				add "Created new question:%nl%- Name: %{_n}%" to {appeditor.CommandLog::%discord id of event-member%::%discord id of event-guild%::*}
+				edit {appeditor.ChannelEmbed::%discord id of event-member%::%discord id of event-guild%} with appeditor_embed(event-member, event-guild, {_nolog})
+
+				set {appeditor.QuestionCreator::%discord id of event-member%::%discord id of event-guild%} to "qdesc"
+				delete {appeditor.QuestionCreator::%discord id of event-member%::%discord id of event-guild%}
+				stop
+			
+
+	if content of event-message = "close editor":
+		add "Quitting editor, please wait..." to {appeditor.CommandLog::%discord id of event-member%::%discord id of event-guild%::*}
+		edit {appeditor.ChannelEmbed::%discord id of event-member%::%discord id of event-guild%} with appeditor_embed(event-member, event-guild, {_nolog})
+		wait 3 seconds
+		destroy ({appeditor.Channel::%discord id of event-member%::%discord id of event-guild%} parsed as guildchannel)
+		wait 1 tick
+		set {_row} to new components row
+		set {_dd} to new dropdown with id "appedit-inmenu-%discord id of event-member%"
+
+		set {_appname::1} to {appedit.EditingApp::%discord id of event-member%::%discord id of event-guild%}
+
+		dropdownMinMax({_dd}, 1, 1)
+
+		add new option with value "appedit-inmenu-openeditor-%{_appname::1}%" named "Open Editor" with description "Opens an editor which you can edit your application in" with emote "mouse_three_button" to options of {_dd}
+		add new option with value "appedit-inmenu-delete-%{_appname::1}%" named "Delete Application" with description "Deletes this application." with emote "wastebasket" to options of {_dd}
+		add new option with value "appedit-inmenu-back-%{_appname::1}%" named "Go Back" with description "Go back to the main menu." with emote "arrow_backward" to options of {_dd}
+		add new option with value "appedit-inmenu-exit-%{_appname::1}%" named "Exit Entirely" with description "Exit the menu entirely. This lets someone else use the editor." with emote "x" to options of {_dd}
+
+		add {_dd} to components of {_row}
+
+		make embed:
+			set title of the embed to "Applications editor - Editing %{_appname::1}%"
+			set description of the embed to "Click on the dropdown and select an appropriate action you want to do."
+			set embed color of the embed to yellow
+		edit {appeditoremb::%discord id of event-member%} with last embed with components {_row}
+		stop
+
+	if content of event-message = "edit application name":
+		add "Please enter the new application name you want to apply. To cancel this action, type ""cancel action""." to {appeditor.CommandLog::%discord id of event-member%::%discord id of event-guild%::*}
+		edit {appeditor.ChannelEmbed::%discord id of event-member%::%discord id of event-guild%} with appeditor_embed(event-member, event-guild, {_nolog})
+
+		set {appeditor.RenameApplication::%discord id of event-member%::%discord id of event-guild%} to true
+		stop
+	
+	if content of event-message = "create new question":
+		loop 20 times:
+			set {_v} to yml value "questions.%loop-number%.name" from file "plugins/DisTune/applicationsdata/%discord id of event-guild%/%{appedit.EditingApp::%discord id of event-member%::%discord id of event-guild%}%.yml"
+			if {_v} != "none":
+				continue loop
+			
+			else:
+				set {appeditor.NewQNumber::%discord id of event-member%::%discord id of event-guild%} to loop-number
+				stop loop
+		
+		if {appeditor.NewQNumber::%discord id of event-member%::%discord id of event-guild%} is set:
+			set {appeditor.QuestionCreator::%discord id of event-member%::%discord id of event-guild%} to "qname"
+			add "Please enter the question for question ##%{appeditor.NewQNumber::%discord id of event-member%::%discord id of event-guild%}% (example: ""What do you like?"")." to {appeditor.CommandLog::%discord id of event-member%::%discord id of event-guild%::*}
+		else:
+			add "All questions are used. You can delete a question using the `delete question` command or by editing an existing one using `edit question`." to {appeditor.CommandLog::%discord id of event-member%::%discord id of event-guild%::*}
+		edit {appeditor.ChannelEmbed::%discord id of event-member%::%discord id of event-guild%} with appeditor_embed(event-member, event-guild, {_nolog})
+		stop
+	
+	
+	else:
+		add "Unknown command ""%content of event-message%"". Check the list above for valid commands." to {appeditor.CommandLog::%discord id of event-member%::%discord id of event-guild%::*}
+		edit {appeditor.ChannelEmbed::%discord id of event-member%::%discord id of event-guild%} with appeditor_embed(event-member, event-guild, {_nolog})
+		stop

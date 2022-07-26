@@ -1,0 +1,194 @@
+#! File automatically made in Discord by Cerial#1024! (7/13/22, 8:00 AM)
+
+options:
+    bot: "DisTune"
+
+    footerText: "DisTune - A powerful Discord bot of your dreams."
+    icon: "https://cdn.discordapp.com/attachments/809401069489750057/947037864120680458/distune-new.png"
+
+    color: hex "2F3136"
+
+# test to see smth eeee e
+
+on load:
+    set {_c} to newSlash("games", "Epic games here!")
+
+    set {_eg::flipthecoin} to newSubCmd_Slash("flipthecoin", "Flip a coin.")
+
+    set {_eg::truthordare} to newSubCmd_Slash("truthordare", "Play truth or dare with whoever you want (you can play with up to 5 people)")
+    newOption_Slash({_eg::truthordare}, "questionrating", "The rating of the questions which will be asked (valid options: PG, Teen and Adult)")
+    newOption_Slash({_eg::truthordare}, "player1", "The first player you want to invite.", "user")
+    newOption_Slash({_eg::truthordare}, "player2", "The second player you want to invite.", "user", true)
+    newOption_Slash({_eg::truthordare}, "player3", "The third player you want to invite.", "user", true)
+    newOption_Slash({_eg::truthordare}, "player4", "The forth player you want to invite.", "user", true)
+    newOption_Slash({_eg::truthordare}, "player5", "The fifth player you want to invite.", "user", true)
+
+
+    add {_eg::*} to sub commands of {_c}
+    addSlash_Global({_c}, "games")
+
+on slash command:
+    event-string = "games/truthordare"
+    
+    set {_id} to random integer between 111111 and 999999
+    broadcast "game id is %{_id}%"
+
+    set {_rating} to argument "questionrating" as string
+    if {_rating} = "PG":
+        set {tod.QuestionRating::%{_id}%} to "PG"
+    
+    else if {_rating} = "Teen":
+        set {tod.QuestionRating::%{_id}%} to "PG13"
+    
+    else if {_rating} = "Adult":
+        set {tod.QuestionRating::%{_id}%} to "R"
+    
+    else:
+        make embed:
+            set title of the embed to "Error!"
+            set description of the embed to "The rating **%{_rating}%** is invalid. The valid rating are:%nl%PG, Teen and Adult."
+            set embed color of the embed to red
+        reply with hidden last embed
+        stop
+    
+
+    loop 5 times:
+        set {_num} to loop-number
+        if (argument "player%{_num}%" as user) is not set:
+            stop loop
+            
+        add discord id of (argument "player%{_num}%" as user) to {tod.Playing::%{_id}%::*}
+
+    
+
+    set {tod.GameOwner::%{_id}%} to discord id of event-member
+
+    delete {_num}
+    set {tod.Turn::%{_id}%} to {tod.Playing::%{_id}%::1}
+
+    set {_r} to new components row
+    add new secondary button with id "truthbutton-%{_id}%-%discord id of {tod.Playing::%{_id}%::1}%" named "Truth" to components of {_r}
+    add new secondary button with id "darebutton-%{_id}%-%discord id of {tod.Playing::%{_id}%::1}%" named "Dare" to components of {_r}
+    add new danger button with id "quitgame-%{_id}%" named "Quit Game" to components of {_r}
+
+    make embed:
+        set title of the embed to "Truth or Dare"
+        set description of the embed to "<@%{tod.Playing::%{_id}%::1}%>, truth or dare?%nl%Select using the buttons below."
+        set footer of the embed to "Game ID: %{_id}%"
+        set embed color of the embed to light blue
+    reply with last embed with components {_r} and store it in {tos.GameEmbed::%{_id}%}
+    
+on button click:
+    set {_sp::*} to split event-string at "-"
+    set {_id} to {_sp::2}
+
+    broadcast "button clicked, debugging shit time"
+    broadcast "%{tos.Playing::%{_id}%::*}% & %{tos.GameOwner::%{_id}%}% | %{_sp::*}% | %{_id}%"
+
+    if {_sp::1} = "quitgame":
+        if {_pl::*} contains "%discord id of event-member%":
+            if {tod.GameOwner::%{_id}%} = discord id of event-member:
+                make embed:
+                    set title of the embed to "Truth or Dare - Game Ended"
+                    set description of the embed to "<@%{tod.GameOwner::%{_id}%}%> has ended the game."
+                    set embed color of the embed to yellow
+                edit {tos.GameEmbed::%{_id}%} with last embed
+
+                delete {tos.GameEmbed::%{_id}%}
+                delete {tos.GameOwner::%{_id}%}
+                delete {tos.Playing::%{_id}%::*}
+                delete {tos.Turn::%{_id}%}
+                stop
+                
+            else:
+                remove discord id of event-member from {tos.Playing::%{_id}%::*}
+                make embed:
+                    set title of the embed to "Truth or Dare - Left Game"
+                    set description of the embed to "You have left the game."
+                    set embed color of the embed to lime
+                reply with hidden last embed
+                stop
+
+    if {_pl::*} doesn't contain "%discord id of event-member%":
+        make embed:
+            set title of the embed to "Error!"
+            set description of the embed to "You are not playing in the game you're trying to interact with."
+            set embed color of the embed to red
+        reply with hidden last embed
+        stop
+    
+    else if {tod.Turn::%{_id}%} != discord id of event-member:
+        make embed:
+            set title of the embed to "Error!"
+            set description of the embed to "It is <@%{tod.Turn::%{_id}%}%>'s turn. Wait until their turn is finished."
+            set embed color of the embed to red
+        reply with hidden last embed
+        stop
+    
+    else:
+
+
+        if {_sp::1} = "truthbutton":
+            set {_q} to text from url "https://api.truthordarebot.xyz/v1/truth?rating=%{tod.QuestionRating::%{_id}%}%"
+            map json {_q} to {_json::*}
+
+            set {_r} to new components row
+            add new success button with id "truthfinished-%{_id}%-%discord id of {playerarg::1::%{_id}%}%" named "Finished" with emote "white_check_mark" to components of {_r}
+
+            make embed:
+                set title of the embed to "Truth or Dare - Selected Truth"
+                set description of the embed to "Your truth question is: ```%nl%%{json::question}%%nl%```%nl%Done answering? Click the ""Finished"" button."
+                set embed color of the embed to light blue
+            edit {tos.GameEmbed::%{_id}%} with last embed with components {_r}
+            stop
+        
+        if {_sp::1} = "darebutton":
+            set {_q} to text from url "https://api.truthordarebot.xyz/v1/dare?rating=%{tod.QuestionRating::%{_id}%}%"
+            map json {_q} to {_json::*}
+
+            set {_r} to new components row
+            add new success button with id "truthfinished-%{_id}%-%discord id of {playerarg::1::%{_id}%}%" named "Finished" with emote "white_check_mark" to components of {_r}
+
+            make embed:
+                set title of the embed to "Truth or Dare - Selected Truth"
+                set description of the embed to "Your truth question is: ```%nl%%{json::question}%%nl%```%nl%Done answering? Click the ""Finished"" button."
+                set embed color of the embed to light blue
+            edit {tos.GameEmbed::%{_id}%} with last embed with components {_r}
+            stop
+
+
+
+on slash command:
+    event-string = "games/flipthecoin"
+
+    if {_ftc::%discord id of event-member%} is set:
+        make embed:
+            set title of the embed to "Error!"
+            set description of the embed to "You are alredy flipping a coin! Please wait until it finishes!"
+            set embed color of the embed to red
+        reply with hidden last embed
+        stop
+
+    make embed:
+        set title of the embed to "Flipping coin..."
+        set description of the embed to "The coin is flipping..."
+        set embed color of the embed to yellow
+    reply with last embed and store it in {_ftc::%discord id of event-member%}
+
+    wait 1 second
+    
+    set {_num} to random integer between 1 and 2
+
+    if {_num} = 1:
+        set {_r} to "heads"
+    
+    if {_num} = 2:
+        set {_r} to "tails"
+    
+    make embed:
+        set title of the embed to "Coin flipped!"
+        set description of the embed to "You have got: %{_r}%!"
+        set embed color of the embed to lime
+    edit {_ftc::%discord id of event-member%} with last embed
+    delete {_ftc::%discord id of event-member%}
+    stop

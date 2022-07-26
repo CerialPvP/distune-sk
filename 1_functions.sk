@@ -1,0 +1,238 @@
+options:
+	bot: "DisTune"
+
+	footerText: "DisTune - A powerful Discord bot of your dreams."
+	icon: "https://cdn.discordapp.com/attachments/809401069489750057/947037864120680458/distune-new.png"
+
+	red: hex "ff0000"
+	blue: hex "0000ff"
+	green: hex "00ff00"
+	yellow: hex "ddff00"
+	orange: hex "ffb300"
+	aqua: hex "00fffb"
+	cyan: hex "1f9190"
+	black: hex "000000"
+	gray: hex "1c1b1b"
+	purple: hex "3640f6"
+
+# Slash commands
+
+# Command maker
+
+function newSlash(n: string, d: string) :: object:
+	set {_nslash} to new slash command named "%{_n}%" with desc {_d}
+	return {_nslash}
+
+# Options editor
+
+function newOption_Slash_Set(v: object, n: string, d: string, t: string="string", o: boolean=false) :: object:
+	if {_t} = "string":
+		if {_o} = false:
+			add required string option named "%{_n}%" with description "%{_d}%" to options of {_v}
+		
+		else:
+			add string option named "%{_n}%" with description "%{_d}%" to options of {_v}
+
+	if {_t} = "boolean":
+		if {_o} = false:
+			add required boolean option named "%{_n}%" with description "%{_d}%" to options of {_v}
+		
+		else:
+			add boolean option named "%{_n}%" with description "%{_d}%" to options of {_v}
+
+	if {_t} = "user":
+		if {_o} = false:
+			add required user option named "%{_n}%" with description "%{_d}%" to options of {_v}
+		
+		else:
+			add user option named "%{_n}%" with description "%{_d}%" to options of {_v}
+	
+	if {_t} = "integer":
+		if {_o} = false:
+			add required integer option named "%{_n}%" with description "%{_d}%" to options of {_v}
+		
+		else:
+			add integer option named "%{_n}%" with description "%{_d}%" to options of {_v}
+
+	if {_t} = "number":
+		if {_o} = false:
+			add required number option named "%{_n}%" with description "%{_d}%" to options of {_v}
+		
+		else:
+			add number option named "%{_n}%" with description "%{_d}%" to options of {_v}
+	
+	if {_t} = "channel":
+		if {_o} = false:
+			add required channel option named "%{_n}%" with description "%{_d}%" to options of {_v}
+		
+		else:
+			add channel option named "%{_n}%" with description "%{_d}%" to options of {_v}
+	
+	if {_t} = "role":
+		if {_o} = false:
+			add required role option named "%{_n}%" with description "%{_d}%" to options of {_v}
+		
+		else:
+			add role option named "%{_n}%" with description "%{_d}%" to options of {_v}
+
+function newOption_Slash(v: object, n: string, d: string, t: string="string", o: boolean=false):
+	if {_t} = "string":
+		if {_o} = false:
+			add required string option named "%{_n}%" with description "%{_d}%" to options of {_v}
+		
+		else:
+			add string option named "%{_n}%" with description "%{_d}%" to options of {_v}
+
+	if {_t} = "boolean":
+		if {_o} = false:
+			add required boolean option named "%{_n}%" with description "%{_d}%" to options of {_v}
+		
+		else:
+			add boolean option named "%{_n}%" with description "%{_d}%" to options of {_v}
+
+	if {_t} = "user":
+		if {_o} = false:
+			add required user option named "%{_n}%" with description "%{_d}%" to options of {_v}
+		
+		else:
+			add user option named "%{_n}%" with description "%{_d}%" to options of {_v}
+	
+	if {_t} = "integer":
+		if {_o} = false:
+			add required integer option named "%{_n}%" with description "%{_d}%" to options of {_v}
+		
+		else:
+			add integer option named "%{_n}%" with description "%{_d}%" to options of {_v}
+
+	if {_t} = "number":
+		if {_o} = false:
+			add required number option named "%{_n}%" with description "%{_d}%" to options of {_v}
+		
+		else:
+			add number option named "%{_n}%" with description "%{_d}%" to options of {_v}
+	
+	if {_t} = "channel":
+		if {_o} = false:
+			add required channel option named "%{_n}%" with description "%{_d}%" to options of {_v}
+		
+		else:
+			add channel option named "%{_n}%" with description "%{_d}%" to options of {_v}
+	
+	if {_t} = "role":
+		if {_o} = false:
+			add required role option named "%{_n}%" with description "%{_d}%" to options of {_v}
+		
+		else:
+			add role option named "%{_n}%" with description "%{_d}%" to options of {_v}
+
+	if {_t} = "mentionable":
+		if {_o} = false:
+			add required mentionable option named "%{_n}%" with description "%{_d}%" to options of {_v}
+		
+		else:
+			add mentionable option named "%{_n}%" with description "%{_d}%" to options of {_v}
+
+# Subcommandsf
+
+function newSubCmd_Slash(n: string, d: string) :: object:
+	set {_r} to new sub command named {_n} with description {_d}
+	return {_r}
+
+function groupSub_Slash(c: object, s: object):
+	add {_s} to sub commands of {_c}
+
+# Slash command adders
+
+function addSlash_Local(slash: object, name: string):
+
+	delete {slashcmd.Local::%{_name}%}
+	set {slashcmd.Local::%{_name}%} to {_slash}
+
+	update command {slashcmd.Local::*} locally in guild with id "932659866110160936"
+
+function addSlash_Local_GM(slash: object, name: string):
+
+	delete {slashcmd.LocalGM::%{_name}%}
+	set {slashcmd.LocalGM::%{_name}%} to {_slash}
+
+	update command {slashcmd.LocalGM::*} locally in guild with id "718519105644396694"
+
+function addSlash_Global(slash: object, name: string):
+
+	delete {slashcmd.Global::%{_name}%}
+	set {slashcmd.Global::%{_name}%} to {_slash}
+
+	update command {slashcmd.Global::*} globally in bot {@bot}
+
+
+function newChoice(v: object, n: string, d: string):
+	add new choice named "%{_n}%" with value "%{_d}%" to choices of {_v}
+
+
+
+function newButton(r: object, t: string, id: string, n: string, e: string="none", d: boolean=false):
+	if {_t} = "primary":
+		if {_d} = false:
+			add new primary button with id {_id} named {_n} to components of {_r} if {_e} = "none"
+			add new primary button with id {_id} named {_n} with emoji {_e} to components of {_r} if {_e} != "none"
+		
+		else:
+			add new disabled primary button with id {_id} named {_n} to components of {_r} if {_e} = "none"
+			add new disabled primary button with id {_id} named {_n} with emoji {_e} to components of {_r} if {_e} != "none"
+	
+	if {_t} = "secondary":
+		if {_d} = false:
+			add new secondary button with id {_id} named {_n} to components of {_r} if {_e} = "none"
+			add new secondary button with id {_id} named {_n} with emoji {_e} to components of {_r} if {_e} != "none"
+		
+		else:
+			add new disabled secondary button with id {_id} named {_n} to components of {_r} if {_e} = "none"
+			add new disabled secondary button with id {_id} named {_n} with emoji {_e} to components of {_r} if {_e} != "none"
+	
+	if {_t} = "success":
+		if {_d} = false:
+			add new success button with id {_id} named {_n} to components of {_r} if {_e} = "none"
+			add new success button with id {_id} named {_n} with emoji {_e} to components of {_r} if {_e} != "none"
+		
+		else:
+			add new disabled success button with id {_id} named {_n} to components of {_r} if {_e} = "none"
+			add new disabled success button with id {_id} named {_n} with emoji {_e} to components of {_r} if {_e} != "none"
+	
+	if {_t} = "danger":
+		if {_d} = false:
+			add new danger button with id {_id} named {_n} to components of {_r} if {_e} = "none"
+			add new danger button with id {_id} named {_n} with emoji {_e} to components of {_r} if {_e} != "none"
+		
+		else:
+			add new disabled danger button with id {_id} named {_n} to components of {_r} if {_e} = "none"
+			add new disabled danger button with id {_id} named {_n} with emoji {_e} to components of {_r} if {_e} != "none"
+
+	if {_t} = "link":
+		if {_d} = false:
+			add new link button with url {_id} named {_n} to components of {_r} if {_e} = "none"
+		
+		else:
+			add new disabled link button with url {_id} named {_n} to components of {_r} if {_e} = "none"
+
+
+# User app commands
+
+function addUser_Local(cmd: object, name: string):
+	delete {usercmd.Local::%{_name}%}
+	set {usercmd.Local::%{_name}%} to {_cmd}
+
+	update command {usercmd.Local::*} locally in guild with id "932659866110160936"
+
+function addUser_Global(cmd: object, name: string):
+	delete {usercmd.Global::%{_name}%}
+	set {usercmd.Global::%{_name}%} to {_cmd}
+
+	update command {usercmd.Global::*} globally in bot {@bot}
+
+function newUserCmd(n: string) :: object:
+	set {_nuser} to new user command named "%{_n}%"
+	return {_nuser}
+
+function dropdownMinMax(dd: dropdown, min: integer, max: integer):
+	set min range of {_dd} to {_min}
+	set max range of {_dd} to {_max}
