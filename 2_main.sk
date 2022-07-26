@@ -14,6 +14,13 @@ define new bot named {@bot}:
 	policy: all
 	auto reconnect: true
 	compression: none
+	on guild ready:
+		send "&b[DisTune] Server %event-guild% has been loaded."
+	
+	on ready:
+		send "&b[DisTune] DisTune is ready. Discord tag: %event-bot%"
+
+	
 
 import:
 	java.lang.System
