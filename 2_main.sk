@@ -1,25 +1,187 @@
 options:
-    bot: "DisTune"
+	bot: "DisTune"
 
-    footerText: "DisTune - A powerful Discord bot of your dreams."
-    icon: "https://cdn.discordapp.com/attachments/809401069489750057/947037864120680458/distune-new.png"
+	footerText: "DisTune - A powerful Discord bot of your dreams."
+	icon: "https://cdn.discordapp.com/attachments/809401069489750057/947037864120680458/distune-new.png"
 
-    color: hex "2F3136"
+	color: hex "2F3136"
+	
+	tabchar: "    "
 
-# Replace "BOT_NAME" with the name of your Discord bot.
-define new bot named "DisTune":
-    # A token is a way for Discord bots to log in.
-    # You can get your token by going to the Discord Developers page.
-    token: "%yml value "token.mainbot" of file "plugins/DisTune/important.yml"%"
-    #! Do not change these settings if you don't know what you're doing.
-    intents: default intents
-    policy: all
-    auto reconnect: true
-    compression: none
-    #! You can now touch below.
-    on ready:
-        # This section will be triggered when the bot is online.
-        send "%event-bot% is ready." to console
-    on guild ready:
-        # This section will be triggered when a certain guild is loaded.
-        send "The guild %event-guild% is now loaded." to console
+define new bot named {@bot}:
+	token: "%yml value "token.main" from file "plugins/DisTune/important.yml"%"
+	intents: default intents 
+	policy: all
+	auto reconnect: true
+	compression: none
+
+import:
+	java.lang.System
+
+expression epoch timestamp of now:
+	get:
+		return floor(System.currentTimeMillis()/1000)
+
+on skript load:
+	set {started} to epoch timestamp of now
+
+	delete {uptime::s}
+	delete {uptime::m}
+	delete {uptime::h}
+	delete {uptime::d}
+
+every 1 second:
+	add 1 to {uptime::s}
+	if {uptime::s} = 60:
+		delete {uptime::s}
+		add 1 to {uptime::m}
+	
+	if {uptime::m} = 60:
+		delete {uptime::m}
+		add 1 to {uptime::h}
+	
+	if {uptime::h} = 24:
+		delete {uptime::h}
+		add 1 to {uptime::d}
+
+on load:
+	set presence of bot {@bot} to watching "%size of all guilds of bot named "DisTune"% servers | /help"
+
+on skript unload:
+	set {stopped} to epoch timestamp of now
+
+
+on load:
+	set {_c} to newSlash("information", "See information about the bot.")
+	addSlash_Global({_c}, "information")
+
+on slash command:
+	event-string = "information"
+
+	make embed:
+		set title of the embed to "Information"
+		set description of the embed to "*DisTune was made at 11th December 2021.*%nl%*It has started out as a music bot, but has been recoded multiple times to adjust the bot.*%nl%*We hope this may be the last recode and the bot actually turns out very well.*"
+		add field named "RAM <:distune_ram_1:995290065796354109><:distune_ram_2:995290068426162186><:distune_ram_3:995290062822588526>" with value "**Free:** %free ram%MB%nl%**Max:** %max ram%MB%nl%**Used:** %max ram-free ram%MB" to embed
+		add field named "Commands <:distune_slash:956666659534417930>" with value "**In testing:** %size of {slashcmd.Local::*}%%nl%**Public:** %size of {slashcmd.Global::*}%%nl%**Total:** %size of {slashcmd.Local::*}+size of {slashcmd.Global::*}%" to embed
+		add field named "Uptime :alarm_clock:" with value "**%{uptime::d} ? 0%** days, **%{uptime::h} ? 0%** hours, **%{uptime::m} ? 0%** minutes and **%{uptime::s} ? 0%** seconds.%nl%Last started <t:%floor({started})%:R> (<t:%floor({started})%>)%nl%Last went offline <t:%floor({stopped})%:R> (<t:%floor({stopped})%>)" to embed
+		set footer of the embed to {@footerText}
+		set footer icon of the embed to {@icon}
+		set embed color of the embed to purple
+	reply with last embed
+
+
+
+on load:
+	set {_c} to newSlash("admintools", "Tools for cool admins :)")
+
+	set {_at::reload} to newSubCmd_Slash("reload", "Reload a script.")
+	newOption_Slash({_at::reload}, "script", "The name of the script you want to reload.")
+
+	set {_at::newfile} to newSubCmd_Slash("newfile", "Create a new Skript file.")
+	newOption_Slash({_at::newfile}, "name", "The name of the new file.")
+
+	add {_at::*} to sub commands of {_c}
+
+	addSlash_Local({_c}, "admintools")
+
+function updatedNow() :: date:
+	set {_n} to "%now%"
+	replace all " AM" in {_n} with ""
+	replace all " PM" in {_n} with ""
+	replace all "," in {_n} with ""
+	replace all " " in {_n} with ";"
+	set {_sn::*} to split {_n} at ";"
+
+	set {_ts::*} to split {_sn::2} at ":"
+	set {_h} to {_ts::1} parsed as number
+	add 3 to {_h}
+	if {_h} > 11:
+		set {_tt} to "PM"
+	
+	else:
+		set {_tt} to "AM"
+
+	set {_date} to ("%{_sn::1}%, %{_h}%:%{_ts::2}% %{_tt}%" parsed as date)
+
+	return {_date}
+
+variables:
+	{filecount} = 3
+
+on slash command:
+	event-string = "admintools/newfile"
+	discord id of event-member = "702044939520835587" or "410781931727486976"
+
+	add 1 to {filecount}
+	set {_n} to argument "name" as string
+	set {tc} to {@tabchar}
+	replace all """" in {tc} with ""
+	create file "plugins/Skript/scripts/%{filecount}%_%{_n}%.sk"
+
+	set {_n1} to System.currentTimeMillis()
+
+	write "##! File automatically made in Discord by %event-user%! (%updatedNow()%)" at line 1 to file "plugins/Skript/scripts/%{filecount}%_%{_n}%.sk"
+	write "" at line 2 to file "plugins/Skript/scripts/%{filecount}%_%{_n}%.sk"
+	write "options:" at line 3 to file "plugins/Skript/scripts/%{filecount}%_%{_n}%.sk"
+	write "%{tc}%bot: "{@bot}"" at line 4 to file "plugins/Skript/scripts/%{filecount}%_%{_n}%.sk"
+	write "" at line 5 to file "plugins/Skript/scripts/%{filecount}%_%{_n}%.sk"
+	write "%{tc}%footerText: "{@footerText}"" at line 6 to file "plugins/Skript/scripts/%{filecount}%_%{_n}%.sk"
+	write "%{tc}%icon: "{@icon}"" at line 7 to file "plugins/Skript/scripts/%{filecount}%_%{_n}%.sk"
+	write "" at line 8 to file "plugins/Skript/scripts/%{filecount}%_%{_n}%.sk"
+	write "%{tc}%color: hex ""2F3136""" at line 9 to file "plugins/Skript/scripts/%{filecount}%_%{_n}%.sk"
+	write "" at line 10 to file "plugins/Skript/scripts/%{filecount}%_%{_n}%.sk"
+	
+	reply with "Made new script named `%{filecount}%_%{_n}%.sk` (took %System.currentTimeMillis()-{_n1}%ms)"
+	stop
+
+
+on slash command:
+	event-string = "admintools/reload"
+	discord id of event-member = "702044939520835587" or "410781931727486976"
+
+	if {reloadEmbed::%discord id of event-member%} is set:
+		make embed:
+			set title of the embed to "Error!"
+			set description of the embed to "You are already reloading a script. Please wait until that reload finishes."
+			set embed color of the embed to red
+		reply with hidden last embed
+		stop
+
+	set {_s} to argument "script" as string
+
+	replace all ".sk" in {_s} with ""
+
+	if file "plugins/Skript/scripts/%{_s}%.sk" doesn't exist:
+		make embed:
+			set title of the embed to "Error!"
+			set description of the embed to "The script `%{_s}%` doesn't exist. Please make sure you typed the name of the script correctly."
+			set embed color of the embed to red
+		reply with hidden last embed
+		stop
+
+	make embed:
+		set title of the embed to "Reload script"
+		set description of the embed to "Reloading script `%{_s}%`, this may take a while..."
+		set embed color of the embed to yellow
+	reply with last embed and store it in {reloadEmbed::%discord id of event-member%}
+
+	set {skLogging} to true
+	set {_n} to System.currentTimeMillis()
+	console command "sk reload %{_s}%"
+
+	make embed:
+		set title of the embed to "Reloading finished!"
+		set description of the embed to "Reloading of skript `%{_s}%` has been finished in **%System.currentTimeMillis()-{_n}%ms**."
+		set embed color of the embed to lime
+	edit {reloadEmbed::%discord id of event-member%} with last embed
+
+	wait 5 ticks
+	delete {reloadEmbed::%discord id of event-member%}
+	stop
+
+function hasPermission(m: member, perm: permission) :: boolean:
+	set {_p::*} to permissions of {_m}
+	if {_p::*} contains {_perm}:
+		return true
+	else:
+		return false
