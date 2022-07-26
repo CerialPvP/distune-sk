@@ -1,0 +1,25 @@
+options:
+    bot: "DisTune"
+
+    footerText: "DisTune - A powerful Discord bot of your dreams."
+    icon: "https://cdn.discordapp.com/attachments/809401069489750057/947037864120680458/distune-new.png"
+
+    color: hex "2F3136"
+
+# Replace "BOT_NAME" with the name of your Discord bot.
+define new bot named "DisTune":
+    # A token is a way for Discord bots to log in.
+    # You can get your token by going to the Discord Developers page.
+    token: "%yml value "token.mainbot" of file "plugins/DisTune/important.yml"%"
+    #! Do not change these settings if you don't know what you're doing.
+    intents: default intents
+    policy: all
+    auto reconnect: true
+    compression: none
+    #! You can now touch below.
+    on ready:
+        # This section will be triggered when the bot is online.
+        send "%event-bot% is ready." to console
+    on guild ready:
+        # This section will be triggered when a certain guild is loaded.
+        send "The guild %event-guild% is now loaded." to console
