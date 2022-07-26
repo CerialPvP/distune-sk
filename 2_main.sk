@@ -19,6 +19,7 @@ define new bot named {@bot}:
 	
 	on ready:
 		send "&b[DisTune] DisTune is ready. Discord tag: %event-bot%" to console
+		updatePresence()
 
 	
 
