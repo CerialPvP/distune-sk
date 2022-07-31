@@ -4,7 +4,7 @@ options:
 	footerText: "DisTune - A powerful Discord bot of your dreams."
 	icon: "https://cdn.discordapp.com/attachments/809401069489750057/947037864120680458/distune-new.png"
 
-	color: hex "2F3136"
+	color: rgb(47, 49, 54)
 	
 	tabchar: "    "
 
@@ -59,25 +59,57 @@ function updatePresence():
 on skript unload:
 	set {stopped} to epoch timestamp of now
 
-
 on load:
-	set {_c} to newSlash("information", "See information about the bot.")
-	addSlash_Global({_c}, "information")
+	set {_c} to newSlash("info", "See information about the bot.")
+	
+	set {_info::bot} to newSubCmd_Slash("bot", "View information about DisTune!")
+
+	set {_info::server} to newSubCmd_Slash("server", "View information about the server you're in.")
+
+	set {_info::user} to newSubCmd_Slash("user", "View information about a user.")
+	newOption_Slash({_info::user}, "user", "The user you want to check.", "user", true)
+	
+	add {_info::*} to sub commands of {_c}
+	addSlash_Global({_c}, "info")
+
+function MBToGB(n: number) :: string:
+	if {_n} >= 1000:
+		return "%{_n}/1000% GB (%{_n}% MB)"
+	
+	else:
+		return "%{_n}% MB"
 
 on slash command:
-	event-string = "information"
+	event-string = "info/bot"
 
 	make embed:
 		set title of the embed to "Information"
 		set description of the embed to "*DisTune was made at 11th December 2021.*%nl%*It has started out as a music bot, but has been recoded multiple times to adjust the bot.*%nl%*We hope this may be the last recode and the bot actually turns out very well.*"
-		add field named "RAM <:distune_ram_1:995290065796354109><:distune_ram_2:995290068426162186><:distune_ram_3:995290062822588526>" with value "**Free:** %free ram%MB%nl%**Max:** %max ram%MB%nl%**Used:** %max ram-free ram%MB" to embed
+		add field named "RAM <:distune_ram_1:995290065796354109><:distune_ram_2:995290068426162186><:distune_ram_3:995290062822588526>" with value "**Free:** %MBToGB(free ram)%%nl%**Max:** %MBToGB(max ram)%%nl%**Used:** %MBToGB(max ram-free ram)%" to embed
 		add field named "Commands <:distune_slash:956666659534417930>" with value "**In testing:** %size of {slashcmd.Local::*}%%nl%**Public:** %size of {slashcmd.Global::*}%%nl%**Total:** %size of {slashcmd.Local::*}+size of {slashcmd.Global::*}%" to embed
 		add field named "Uptime :alarm_clock:" with value "**%{uptime::d} ? 0%** days, **%{uptime::h} ? 0%** hours, **%{uptime::m} ? 0%** minutes and **%{uptime::s} ? 0%** seconds.%nl%Last started <t:%floor({started})%:R> (<t:%floor({started})%>)%nl%Last went offline <t:%floor({stopped})%:R> (<t:%floor({stopped})%>)" to embed
+		add field named "Ping :ping_pong:" with value "**%bot ping of event-bot%ms** from Discord API" to embed
 		set footer of the embed to {@footerText}
 		set footer icon of the embed to {@icon}
-		set embed color of the embed to purple
+		#set embed color of the embed to {@color}
 	reply with last embed
 
+every 1 second:
+	if {sendRam} is set:
+		send "&bUsed RAM: %MBToGB(max ram-free ram)% | &bMax RAM: %MBToGB(max ram)% | &bFree RAM: %MBToGB(free ram)%" to console
+
+
+command /monitorram:
+	trigger:
+		if {sendRam} is not set:
+			set {sendRam} to true
+			send "&aYou are now monitoring RAM."
+			stop
+		
+		else:
+			delete {sendRam}
+			send "&aYou are no longer monitoring RAM."
+			stop
 
 
 on load:
@@ -89,9 +121,22 @@ on load:
 	set {_at::newfile} to newSubCmd_Slash("newfile", "Create a new Skript file.")
 	newOption_Slash({_at::newfile}, "name", "The name of the new file.")
 
+	set {_at::delfile} to newSubCmd_Slash("delfile", "Delete a Skript file.")
+	newOption_Slash({_at::delfile}, "name", "The name of the new file.")
+
+	set {_at::delchannel} to newSubCmd_Slash("delchannel", "Delete a channel.")
+	newOption_Slash({_at::delchannel}, "channel", "The channel you want to delete.", "channel")
+
 	add {_at::*} to sub commands of {_c}
 
 	addSlash_Local({_c}, "admintools")
+
+on slash command:
+	event-string = "admintools/delchannel"
+
+	set {_c} to argument "channel" as channel
+	destroy ({_c} parsed as guildchannel)
+	reply with "channel gon"
 
 function updatedNow() :: date:
 	set {_n} to "%now%"
@@ -104,7 +149,7 @@ function updatedNow() :: date:
 	set {_ts::*} to split {_sn::2} at ":"
 	set {_h} to {_ts::1} parsed as number
 	add 3 to {_h}
-	if {_h} > 11:
+	if {_h} >= 12:
 		set {_tt} to "PM"
 	
 	else:
@@ -116,6 +161,24 @@ function updatedNow() :: date:
 
 variables:
 	{filecount} = 3
+
+on slash command:
+	event-string = "admintools/delfile"
+	discord id of event-member = "702044939520835587" or "410781931727486976"
+
+	set {_n} to argument "name" as string
+
+	if {_n} doesn't contain ".sk":
+		set {_n} to "%{_n}%.sk"
+	delete file "plugins/Skript/scripts/%{_n}%"
+	remove 1 from {filecount}
+
+	make embed:
+		set title of the embed to "File deleted!"
+		set description of the embed to "Deleted file successfully. File count: `%{filecount}%`"
+		set embed color of the embed to lime
+	reply with last embed
+	stop
 
 on slash command:
 	event-string = "admintools/newfile"
@@ -134,10 +197,10 @@ on slash command:
 	write "options:" at line 3 to file "plugins/Skript/scripts/%{filecount}%_%{_n}%.sk"
 	write "%{tc}%bot: "{@bot}"" at line 4 to file "plugins/Skript/scripts/%{filecount}%_%{_n}%.sk"
 	write "" at line 5 to file "plugins/Skript/scripts/%{filecount}%_%{_n}%.sk"
-	write "%{tc}%footerText: "{@footerText}"" at line 6 to file "plugins/Skript/scripts/%{filecount}%_%{_n}%.sk"
+	write "%{tc}%footerText: "{@footerText}"" at line 6 to file "plugins/$Skript/scripts/%{filecount}%_%{_n}%.sk"
 	write "%{tc}%icon: "{@icon}"" at line 7 to file "plugins/Skript/scripts/%{filecount}%_%{_n}%.sk"
 	write "" at line 8 to file "plugins/Skript/scripts/%{filecount}%_%{_n}%.sk"
-	write "%{tc}%color: hex ""2F3136""" at line 9 to file "plugins/Skript/scripts/%{filecount}%_%{_n}%.sk"
+	write "%{tc}%color: rgb(47, 49, 54)" at line 9 to file "plugins/Skript/scripts/%{filecount}%_%{_n}%.sk"
 	write "" at line 10 to file "plugins/Skript/scripts/%{filecount}%_%{_n}%.sk"
 	
 	reply with "Made new script named `%{filecount}%_%{_n}%.sk` (took %System.currentTimeMillis()-{_n1}%ms)"
