@@ -93,6 +93,7 @@ on slash command:
 		set footer icon of the embed to {@icon}
 		#set embed color of the embed to {@color}
 	reply with last embed
+#e
 
 every 1 second:
 	if {sendRam} is set:
