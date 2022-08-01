@@ -269,3 +269,8 @@ on bot guild join:
 		set description of the embed to "Hello, I am DisTune, a multi-purpose Discord bot which has a lot of features.%nl%The bot is being worked on a lot, so if you have any suggestion, leave them at /feedback.%nl%Now, here are some basic commands:%nl%%nl%- **/help** View all commmands or a specific command's information.%nl%- **/info bot** View technical information about the bot.%nl%- **/invite** Did you like me? Do that command to get the invite link."
 		set embed color of the embed to yellow
 	post last embed to (random element out of (all text channels of event-guild))
+
+function getUserName(u: user) :: string:
+	set {_N} to {_u}
+	replace all "##%discriminator of {_u}%" in {_N} with ""
+	return {_N}
