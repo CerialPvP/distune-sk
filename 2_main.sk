@@ -274,3 +274,55 @@ function getUserName(u: user) :: string:
 	set {_N} to {_u}
 	replace all "##%discriminator of {_u}%" in {_N} with ""
 	return {_N}
+
+on load:
+	set {_c} to newSlash("purge", "Delete an amount of messages in a channel.")
+
+	newOption_Slash({_c}, "msgs", "The amount of messages to delete.", "integer")
+	newOption_Slash({_c}, "channel", "The channel to delete the messages", "channel", true)
+
+	addSlash_Global({_c}, "purge")
+
+on slash command:
+	event-string = "purge"
+
+	# message manage
+	if hasPermission(event-member, (message manage)) = false:
+		make embed:
+			set title of the embed to "Error!"
+			set description of the embed to "You need the permission `manage messages` to use this command."
+			set embed color of the embed to red
+		reply with hidden last embed
+		stop
+
+	if {_purge::%discord id of event-member%} is set:
+		make embed:
+			set title of the embed to "Error!"
+			set description of the embed to "You are already purging messages, please wait..."
+			set embed color of the embed to red
+		reply with hidden last embed
+		stop
+
+	make embed:
+		set title of the embed to "Purging..."
+		set description of the embed to "The messages are being purged, please wait..."
+		set embed color of the embed to yellow
+	reply with last embed
+
+	set {_postchannel} to event-channel
+
+	set {_amount} to argument "msgs" as integer
+	set {_channel} to argument "channel" as channel
+	if {_channel} is not set:
+		set {_channel} to event-channel
+	
+	retrieve last {_amount}+1 messages in {_channel} and store them in {_msgs::*}
+	purge {_msgs::*}
+
+	make embed:
+		set title of the embed to "Purged!"
+		set description of the embed to "**%{_amount}%** messages have been deleted from %mention tag of {_channel}%."
+		set embed color of the embed to lime
+	edit {_purge:%discord id of event-member%} with last embed
+	post last embed in {_postchannel}
+	stop
