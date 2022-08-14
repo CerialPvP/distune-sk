@@ -1,0 +1,1061 @@
+#! File automatically made in Discord by ! Cerial#0001! (8/10/22, 10:36 AM)
+
+options:
+    bot: "DisTune"
+
+
+    icon: "https://cdn.discordapp.com/attachments/809401069489750057/947037864120680458/distune-new.png"
+
+    color: rgb(47, 49, 54)
+
+    uuid: f25e8d2c-e0c0-4e82-8b0a-c61d2fb75690
+
+on load:
+    set {_c} to newSlash("hypixel", "Hypixel commands!")
+
+    set {_hy::status} to newSubCmd_Slash("status", "Check the status of the Hypixel API.")
+
+    set {_hy::friends} to newSubCmd_Slash("friends", "Check the friends of a player.")
+    newOption_Slash({_hy::friends}, "player", "The name of the player you want to check their friends.")
+
+    set {_hy::info} to newSubCmd_Slash("info", "Get general Hypixel information of a player.")
+    newOption_Slash({_hy::info}, "player", "The name of the player you want to check their stats.")
+
+    add {_hy::*} to sub commands of {_c}
+
+    addSlash_Global({_c}, "hypixel")
+
+on load:
+    set {apikey} to yml value "apikey" from file "plugins/DisTune/important.yml"
+
+function booleanToYN(b: boolean) :: string:
+    return "yes" if {_b} = true
+    return "no" if {_b} = false
+
+function hypixel_apistatus(success: string, cause: string, username: string) :: embedbuilder:
+    make embed:
+        set title of the embed to "Hypixel - API status"
+        set {_syn} to booleanToYN({_success} parsed as boolean)
+        #broadcast "Values: %{_syn}% | %{_success}% | %{_cause}%"
+
+        add field named "API Key Valid" with value {_syn} to embed
+        if {_syn} = "no":
+            if {_cause} = "Invalid API key":
+                add field named "Faliure Cause" with value "The Hypixel API key the bot is using is invalid. Contact Cerial as soon as possible" to embed
+            
+            else if {_cause} = "Key throttle":
+                add field named "Faliure Cause" with value "The Hypixel API is either being overloaded or the API key is being overloaded." to embed
+        
+            set embed color of the embed to red
+        
+        else if {_syn} = "yes":
+            set embed color of the embed to lime
+            add field named "Key Owner" with value "%{_username}%" to embed
+            set thumbnail of the embed to "https://minotar.net/helm/%{_username}%/100.png"
+        
+    return last embed
+
+
+
+
+on slash command:
+    event-string = "hypixel/status"
+    delete {_json::*} and {_b} and {_json2::*} and {_b2}
+
+    if {_e::%discord id of event-member%} is set:
+        reply with hidden ":x: You're already checking Hypixel API status!"
+        stop
+
+    make embed:
+        set description of the embed to "<a:distune_loading:1006642541996814336> **Checking Hypixel API status...**"
+        set embed color of the embed to yellow
+    reply with last embed and store it in {_e::%discord id of event-member%}
+
+    send a request to "https://api.hypixel.net/key?key=%{apikey}%"
+    set {_b} to last http response's body
+    copy json {_b} to {_json::*}
+    #post "**HYPIXEL API HTTP DEBUG MODE**%nl%HTTP Response: ```json%nl%%{_b}%```%nl%Skript Output: ```%nl%%{_json::*}%```" to event-channel
+
+    send a request to "https://api.mojang.com/user/profile/%{_json::record::owner}%"
+    set {_b2} to last http response's body
+    copy json {_b2} to {_json2::*}
+    #post "**MOJANG API HTTP DEBUG MODE**%nl%HTTP Response: ```json%nl%%{_b2}%```%nl%Skript Output: ```%nl%%{_json2::*}%```" to event-channel
+
+    edit {_e::%discord id of event-member%} with hypixel_apistatus("%{_json::success}%", "%{_json::cause}%", "%{_json2::name}%")
+    delete {_e::%discord id of event-member%}
+    stop
+
+function noFormat(s: string) :: string:
+    replace all "_" with "\_" in {_s}
+    return {_s}
+
+import:
+    java.lang.System
+
+on slash command:
+    event-string = "hypixel/friends"
+    set {_p} to argument "player" as string
+    delete {friends.List::%discord id of event-member%::%discord id of event-guild%::*}
+
+    set {_n1} to System.currentTimeMillis()
+    make embed:
+        set title of the embed to "<a:distune_loading:1006642541996814336> Checking Hypixel friends of %{_p}%..."
+        delete {_prog::*}
+        add "<a:distune_loading:1006642541996814336> Getting account UUID from Mojang API..." to {_prog::*}
+        add "<a:distune_loading:1006642541996814336> Getting friends from Hypixel API..." to {_prog::*}
+        set description of the embed to "This might take a minute if the user has too many friends.%nl%%join {_prog::*} with nl%"
+        set embed color of the embed to yellow
+    reply with last embed and store it in {friends.Embed::%discord id of event-member%::%discord id of event-guild%}
+
+    set {_b} to text from url "https://api.mojang.com/user/profile/agent/minecraft/name/%{_p}%"
+    copy json {_b} to {_json::*}
+    broadcast "%{_b}% | %{_json::*}%"
+
+    if {_json::*} is not set:
+        make embed:
+            set title of the embed to ":x: Checking Hypixel friends of %{_p}%..."
+            delete {_prog::*}
+            add ":x: The username `%{_p}%` is invalid. Check the spelling of the username." to {_prog::*}
+            add ":x: Getting friends from Hypixel API..." to {_prog::*}
+            set description of the embed to "This might take a minute if the user has too many friends.%nl%%join {_prog::*} with nl%"
+            set embed color of the embed to yellow
+        edit {friends.Embed::%discord id of event-member%::%discord id of event-guild%} with last embed
+        delete {friends.Embed::%discord id of event-member%::%discord id of event-guild%}
+        stop
+    
+    else:
+        make embed:
+            set title of the embed to "<a:distune_loading:1006642541996814336> Checking Hypixel friends of %{_p}%..."
+            delete {_prog::*}
+            add ":white_check_mark: Got account from Mojang API. (Proper Username: %{_json::name}%)" to {_prog::*}
+            add "<a:distune_loading:1006642541996814336> Getting friends from Hypixel API..." to {_prog::*}
+            set description of the embed to "This might take a minute if the user has too many friends.%nl%%join {_prog::*} with nl%"
+            set embed color of the embed to yellow
+        edit {friends.Embed::%discord id of event-member%::%discord id of event-guild%} with last embed
+    
+    set {_b2} to text from url "https://api.hypixel.net/friends?key=%{apiKey}%&uuid=%{_json::id}%"
+    copy json {_b2} to {_json2::*}
+    #broadcast "%{_b2}% | %{_json2::*}%"
+
+    # Edit this when doing buttons/dropdown
+    set {_page} to 1
+    set {_start} to ({_page} * 20)-20
+    set {_end} to {_page} * 20
+
+    loop {_json2::records::*}:
+        set {_num} to loop-index parsed as integer
+        if {_num} = {_start}:
+            set {_do} to true
+        
+        if {_num} = {_end}:
+            set {_do} to false
+
+        if {_do} = false:
+            stop loop
+        
+        else:
+            if noFormat({_json2::records::%{_num}%::uuidSender}) = {_json::id}:
+                delete {_json3::*}
+                set {_b3} to text from url "https://api.minetools.eu/uuid/%noFormat({_json2::records::%{_num}%::uuidReceiver})%"
+                copy json {_b3} to {_json3::*}
+                if {_json3::id} is not set:
+                    stop loop
+                #wait 1 tick
+                #broadcast "%loop-index%;%noFormat({_json2::records::%{_num}%::uuidReceiver})%;%{_json3::name}%;receiver"
+                add "%{_num}%. **%{_json3::name}%** (Receiver)" to {_dis::%discord id of event-member%::*}
+
+                
+            else:
+                delete {_json3::*}
+                set {_b3} to text from url "https://api.minetools.eu/uuid/%noFormat({_json2::records::%{_num}%::uuidSender})%"
+                copy json {_b3} to {_json3::*}
+                if {_json3::id} is not set:
+                    stop loop
+                #wait 1 tick
+                #broadcast "%loop-index%;%noFormat({_json2::records::%{_num}%::uuidSender})%;%{_json3::name}%;sender"
+                add "%{_num}%. **%{_json3::name}%** (Sender)" to {_dis::%discord id of event-member%::*}
+
+    loop {_json2::records::*}:
+        set {_s} to loop-index parsed as integer
+            
+            
+    make embed:
+        set title of the embed to "<a:distune_loading:1006642541996814336> Checking Hypixel friends of %{_p}%..."
+        delete {_prog::*}
+        add ":white_check_mark: Got account from Mojang API. (Proper Username: %{_json::name}%)" to {_prog::*}
+        add ":white_check_mark: Got friends from the Hypixel API. The friend list will be displayed in a second." to {_prog::*}
+        set description of the embed to "This might take a minute if the user has too many friends.%nl%%join {_prog::*} with nl%"
+        set embed color of the embed to yellow
+    edit {friends.Embed::%discord id of event-member%::%discord id of event-guild%} with last embed
+
+
+    wait 1 second
+    
+    set {friends.Pages::%discord id of event-member%::%discord id of event-guild%} and {_pgs} to ceil({_s} / 20)
+    set {friends.CurrentPage::%discord id of event-member%::%discord id of event-guild%} to 1
+    set {friends.Information::%discord id of event-member%::%discord id of event-guild%} to "%{_json::name}%;%{_json::id}%"
+    set {_r::1} to new components row
+    if {_page} < 2:
+        add new disabled primary button with id "hfriends-%discord id of event-member%-back" named " " with emote "arrow_left" to components of {_r::1}
+    else:
+        add new primary button with id "hfriends-%discord id of event-member%-back" named " " with emote "arrow_left" to components of {_r::1}
+
+    add new disabled secondary button with id "hfriends-%discord id of event-member%-pageamt" named "Page %{friends.CurrentPage::%discord id of event-member%::%discord id of event-guild%}%/%{_pgs}%" to components of {_r::1}
+
+    add new primary button with id "hfriends-%discord id of event-member%-next" named " " with emote "arrow_right" to components of {_r::1}
+
+    set {_r::2} to new components row
+    add new success button with id "hfriends-%discord id of event-member%-custompagenum" named "Enter Page Number" to components of {_r::2}
+
+    make embed:
+        set title of the embed to "Hypixel - Friends list of %{_json::name}%"
+        set description of the embed to "%join {_dis::%discord id of event-member%::*} with nl%"
+        set footer of the embed to "They have %{_s}% friends. Finished action in %System.currentTimeMillis()-{_n1}%ms."
+        set embed color of the embed to lime
+    edit {friends.Embed::%discord id of event-member%::%discord id of event-guild%} with last embed with components {_r::*}
+    stop
+
+on button click:
+    event-string contains "hfriends"
+    set {_s::*} to split event-string at "-"
+
+    if discord id of event-member != {_s::2}:
+        reply with hidden ":x: This is not your Hypixel Friends checker session."
+        stop
+    
+    if {_s::3} = "next":
+        defer the interaction
+        
+        set {_info::*} to split {friends.Information::%discord id of event-member%::%discord id of event-guild%} at ";"
+        set {_pgs} to {friends.Pages::%discord id of event-member%::%discord id of event-guild%}
+        add 1 to {friends.CurrentPage::%discord id of event-member%::%discord id of event-guild%}
+        set {_p} to {_info::1}
+
+        make embed:
+            set title of the embed to "<a:distune_loading:1006642541996814336> Checking Hypixel friends of %{_info::1}%..."
+            delete {_prog::*}
+            add "<a:distune_loading:1006642541996814336> Getting new friends list from Hypixel API..." to {_prog::*}
+            set description of the embed to "This might take a minute if the user has too many friends.%nl%%join {_prog::*} with nl%"
+            set embed color of the embed to yellow
+        edit {friends.Embed::%discord id of event-member%::%discord id of event-guild%} with last embed
+
+        set {_n1} to System.currentTimeMillis()
+        set {_b2} to text from url "https://api.hypixel.net/friends?key=%{apiKey}%&uuid=%{_info::2}%"
+        copy json {_b2} to {_json2::*}
+        #broadcast "%{_b2}% | %{_json2::*}%"
+
+        # Edit this when doing buttons/dropdown
+        set {_page} to {friends.CurrentPage::%discord id of event-member%::%discord id of event-guild%}
+        set {_start} to ({_page} * 20)-20
+        set {_end} to {_page} * 20
+
+        broadcast "%{_page}% %{_start}% %{_end}%"
+
+        loop (({_page}*20)) times:
+            set {_num} to loop-number
+            if {_num} < {_start}:
+                continue
+
+            if noFormat({_json2::records::%{_num}%::uuidSender}) = {_info::2}:
+                delete {_json3::*}
+                set {_b3} to text from url "https://api.minetools.eu/uuid/%noFormat({_json2::records::%{_num}%::uuidReceiver})%"
+                copy json {_b3} to {_json3::*}
+                if {_json3::id} is not set:
+                    stop loop
+                #wait 1 tick
+                #broadcast "%loop-number%;%noFormat({_json2::records::%{_num}%::uuidReceiver})%;%{_json3::name}%;receiver"
+                add "%{_num}%. **%{_json3::name}%** (Receiver)" to {_dis::%discord id of event-member%::*}
+
+                        
+            else:
+                delete {_json3::*}
+                set {_b3} to text from url "https://api.minetools.eu/uuid/%noFormat({_json2::records::%{_num}%::uuidSender})%"
+                copy json {_b3} to {_json3::*}
+                if {_json3::id} is not set:
+                    stop loop
+                #wait 1 tick
+                #broadcast "%loop-number%;%noFormat({_json2::records::%{_num}%::uuidSender})%;%{_json3::name}%;sender"
+                add "%{_num}%. **%{_json3::name}%** (Sender)" to {_dis::%discord id of event-member%::*}
+
+        loop {_json2::records::*}:
+            set {_s} to loop-index parsed as integer
+                
+                
+        make embed:
+            set title of the embed to "<a:distune_loading:1006642541996814336> Checking Hypixel friends of %{_p}%..."
+            delete {_prog::*}
+            add ":white_check_mark: Got friends from the Hypixel API. The edited friend list will be displayed in a second." to {_prog::*}
+            set description of the embed to "This might take a minute if the user has too many friends.%nl%%join {_prog::*} with nl%"
+            set embed color of the embed to yellow
+        edit {friends.Embed::%discord id of event-member%::%discord id of event-guild%} with last embed
+
+
+        wait 1 second
+        
+        set {_pgs} to {friends.Pages::%discord id of event-member%::%discord id of event-guild%}
+        set {_r::1} to new components row
+        if {_page} < 2:
+            add new disabled primary button with id "hfriends-%discord id of event-member%-back" named " " with emote "arrow_left" to components of {_r::1}
+        else:
+            add new primary button with id "hfriends-%discord id of event-member%-back" named " " with emote "arrow_left" to components of {_r::1}
+
+        add new disabled secondary button with id "hfriends-%discord id of event-member%-pageamt" named "Page %{friends.CurrentPage::%discord id of event-member%::%discord id of event-guild%}%/%{_pgs}%" to components of {_r::1}
+
+        if {_page} = {_pgs}:
+            add new disabled primary button with id "hfriends-%discord id of event-member%-next" named " " with emote "arrow_right" to components of {_r::1}
+        else:
+            add new primary button with id "hfriends-%discord id of event-member%-next" named " " with emote "arrow_right" to components of {_r::1}
+
+        set {_r::2} to new components row
+        add new success button with id "hfriends-%discord id of event-member%-custompagenum" named "Enter Page Number" to components of {_r::2}
+
+
+        make embed:
+            set title of the embed to "Hypixel - Friends list of %{_info::1}%"
+            set description of the embed to "%join {_dis::%discord id of event-member%::*} with nl%"
+            set footer of the embed to "They have %{_s}% friends. Finished action in %System.currentTimeMillis()-{_n1}%ms."
+            set embed color of the embed to lime
+        edit {friends.Embed::%discord id of event-member%::%discord id of event-guild%} with last embed with components {_r::*}
+        stop
+    
+    if {_s::3} = "back":
+        defer the interaction
+        
+        set {_info::*} to split {friends.Information::%discord id of event-member%::%discord id of event-guild%} at ";"
+        set {_pgs} to {friends.Pages::%discord id of event-member%::%discord id of event-guild%}
+        remove 1 from {friends.CurrentPage::%discord id of event-member%::%discord id of event-guild%}
+        set {_p} to {_info::1}
+
+        make embed:
+            set title of the embed to "<a:distune_loading:1006642541996814336> Checking Hypixel friends of %{_info::1}%..."
+            delete {_prog::*}
+            add "<a:distune_loading:1006642541996814336> Getting new friends list from Hypixel API..." to {_prog::*}
+            set description of the embed to "This might take a minute if the user has too many friends.%nl%%join {_prog::*} with nl%"
+            set embed color of the embed to yellow
+        edit {friends.Embed::%discord id of event-member%::%discord id of event-guild%} with last embed
+
+        set {_n1} to System.currentTimeMillis()
+        set {_b2} to text from url "https://api.hypixel.net/friends?key=%{apiKey}%&uuid=%{_info::2}%"
+        copy json {_b2} to {_json2::*}
+        #broadcast "%{_b2}% | %{_json2::*}%"
+
+        # Edit this when doing buttons/dropdown
+        set {_page} to {friends.CurrentPage::%discord id of event-member%::%discord id of event-guild%}
+        set {_start} to ({_page} * 20)-20
+        set {_end} to {_page} * 20
+
+        broadcast "%{_page}% %{_start}% %{_end}%"
+
+        loop (({_page}*20)) times:
+            set {_num} to loop-number
+            if {_num} < {_start}:
+                continue
+
+            if noFormat({_json2::records::%{_num}%::uuidSender}) = {_info::2}:
+                delete {_json3::*}
+                set {_b3} to text from url "https://api.minetools.eu/uuid/%noFormat({_json2::records::%{_num}%::uuidReceiver})%"
+                copy json {_b3} to {_json3::*}
+                if {_json3::id} is not set:
+                    stop loop
+                #wait 1 tick
+                #broadcast "%loop-number%;%noFormat({_json2::records::%{_num}%::uuidReceiver})%;%{_json3::name}%;receiver"
+                add "%{_num}%. **%{_json3::name}%** (Receiver)" to {_dis::%discord id of event-member%::*}
+
+                        
+            else:
+                delete {_json3::*}
+                set {_b3} to text from url "https://api.minetools.eu/uuid/%noFormat({_json2::records::%{_num}%::uuidSender})%"
+                copy json {_b3} to {_json3::*}
+                if {_json3::id} is not set:
+                    stop loop
+                #wait 1 tick
+                #broadcast "%loop-number%;%noFormat({_json2::records::%{_num}%::uuidSender})%;%{_json3::name}%;sender"
+                add "%{_num}%. **%{_json3::name}%** (Sender)" to {_dis::%discord id of event-member%::*}
+
+        loop {_json2::records::*}:
+            set {_s} to loop-index parsed as integer
+                
+                
+        make embed:
+            set title of the embed to "<a:distune_loading:1006642541996814336> Checking Hypixel friends of %{_p}%..."
+            delete {_prog::*}
+            add ":white_check_mark: Got friends from the Hypixel API. The edited friend list will be displayed in a second." to {_prog::*}
+            set description of the embed to "This might take a minute if the user has too many friends.%nl%%join {_prog::*} with nl%"
+            set embed color of the embed to yellow
+        edit {friends.Embed::%discord id of event-member%::%discord id of event-guild%} with last embed
+
+
+        wait 1 second
+        
+        set {_pgs} to {friends.Pages::%discord id of event-member%::%discord id of event-guild%}
+        set {_r::1} to new components row
+        if {_page} < 2:
+            add new disabled primary button with id "hfriends-%discord id of event-member%-back" named " " with emote "arrow_left" to components of {_r::1}
+        else:
+            add new primary button with id "hfriends-%discord id of event-member%-back" named " " with emote "arrow_left" to components of {_r::1}
+
+        add new disabled secondary button with id "hfriends-%discord id of event-member%-pageamt" named "Page %{friends.CurrentPage::%discord id of event-member%::%discord id of event-guild%}%/%{_pgs}%" to components of {_r::1}
+
+        if {_page} = {_pgs}:
+            add new disabled primary button with id "hfriends-%discord id of event-member%-next" named " " with emote "arrow_right" to components of {_r::1}
+        else:
+            add new primary button with id "hfriends-%discord id of event-member%-next" named " " with emote "arrow_right" to components of {_r::1}
+
+        set {_r::2} to new components row
+        add new success button with id "hfriends-%discord id of event-member%-custompagenum" named "Enter Page Number" to components of {_r::2}
+
+        
+
+        make embed:
+            set title of the embed to "Hypixel - Friends list of %{_info::1}%"
+            set description of the embed to "%join {_dis::%discord id of event-member%::*} with nl%"
+            set footer of the embed to "They have %{_s}% friends. Finished action in %System.currentTimeMillis()-{_n1}%ms."
+            set embed color of the embed to lime
+        edit {friends.Embed::%discord id of event-member%::%discord id of event-guild%} with last embed with components {_r::*}
+        stop
+    
+    if {_s::3} = "custompagenum":
+        set {_m} to new modal with id "hfriends-custompagenum" named "Enter a Page Number..."
+
+        set {_r} to new components row
+
+        set {_i} to new short text input with id "number" named "Enter the number here"
+        set placeholder of {_i} to "You may not enter a higher number or any letter."
+        set min range of {_i} to 1
+        set max range of {_i} to 4
+        add {_i} to components of {_r}
+
+        set components row of {_m} to {_r}
+        show {_m} to the user
+
+on modal receive:
+    event-string = "hfriends-custompagenum"
+
+    set {_d::1} to value of text-input with id "number"
+    set {_shi::*} to split "qwertyuiop[]\!@$%%^&*()_-+=asdfghhjkl;:'""zxcvbnm,./<>?" at ""
+    replace all {_shi::*} in {_d::1} with ""
+    
+    set {_num} to {_d::1} parsed as integer
+    if {_num} > {friends.Pages::%discord id of event-member%::%discord id of event-guild%}:
+        make embed:
+            set title of the embed to "Error!"
+            set description of the embed to "The page number `%{_num}%` is higher than the available pages `%{friends.Pages::%discord id of event-member%::%discord id of event-guild%}%.`"
+            set embed color of the embed to red
+        reply with hidden last embed
+        stop
+    
+    if "%{_d::1}%" = "":
+        make embed:
+            set title of the embed to "Error!"
+            set description of the embed to "You didn't input anything."
+            set embed color of the embed to red
+        reply with hidden last embed
+        stop
+    
+    defer the interaction
+
+    set {_info::*} to split {friends.Information::%discord id of event-member%::%discord id of event-guild%} at ";"
+    set {_pgs} to {friends.Pages::%discord id of event-member%::%discord id of event-guild%}
+    set {friends.CurrentPage::%discord id of event-member%::%discord id of event-guild%} to {_num}
+    set {_p} to {_info::1}
+
+    make embed:
+        set title of the embed to "<a:distune_loading:1006642541996814336> Checking Hypixel friends of %{_info::1}%..."
+        delete {_prog::*}
+        add "<a:distune_loading:1006642541996814336> Getting new friends list from Hypixel API..." to {_prog::*}
+        set description of the embed to "This might take a minute if the user has too many friends.%nl%%join {_prog::*} with nl%"
+        set embed color of the embed to yellow
+    edit {friends.Embed::%discord id of event-member%::%discord id of event-guild%} with last embed
+
+    set {_n1} to System.currentTimeMillis()
+    set {_b2} to text from url "https://api.hypixel.net/friends?key=%{apiKey}%&uuid=%{_info::2}%"
+    copy json {_b2} to {_json2::*}
+    #broadcast "%{_b2}% | %{_json2::*}%"
+
+    # Edit this when doing buttons/dropdown
+    set {_page} to {friends.CurrentPage::%discord id of event-member%::%discord id of event-guild%}
+    set {_start} to ({_page} * 20)-20
+    set {_end} to {_page} * 20
+
+    broadcast "%{_page}% %{_start}% %{_end}%"
+
+    loop (({_page}*20)) times:
+        set {_num} to loop-number
+        if {_num} < {_start}:
+            continue
+
+        if noFormat({_json2::records::%{_num}%::uuidSender}) = {_info::2}:
+            delete {_json3::*}
+            set {_b3} to text from url "https://api.minetools.eu/uuid/%noFormat({_json2::records::%{_num}%::uuidReceiver})%"
+            copy json {_b3} to {_json3::*}
+            if {_json3::id} is not set:
+                stop loop
+            #wait 1 tick
+            #broadcast "%loop-number%;%noFormat({_json2::records::%{_num}%::uuidReceiver})%;%{_json3::name}%;receiver"
+            add "%{_num}%. **%{_json3::name}%** (Receiver)" to {_dis::%discord id of event-member%::*}
+
+                        
+        else:
+            delete {_json3::*}
+            set {_b3} to text from url "https://api.minetools.eu/uuid/%noFormat({_json2::records::%{_num}%::uuidSender})%"
+            copy json {_b3} to {_json3::*}
+            if {_json3::id} is not set:
+                stop loop
+            #wait 1 tick
+            #broadcast "%loop-number%;%noFormat({_json2::records::%{_num}%::uuidSender})%;%{_json3::name}%;sender"
+            add "%{_num}%. **%{_json3::name}%** (Sender)" to {_dis::%discord id of event-member%::*}
+
+    loop {_json2::records::*}:
+        set {_s} to loop-index parsed as integer
+                
+                
+    make embed:
+        set title of the embed to "<a:distune_loading:1006642541996814336> Checking Hypixel friends of %{_p}%..."
+        delete {_prog::*}
+        add ":white_check_mark: Got friends from the Hypixel API. The edited friend list will be displayed in a second." to {_prog::*}
+        set description of the embed to "This might take a minute if the user has too many friends.%nl%%join {_prog::*} with nl%"
+        set embed color of the embed to yellow
+    edit {friends.Embed::%discord id of event-member%::%discord id of event-guild%} with last embed
+
+
+    wait 1 second
+        
+    set {_pgs} to {friends.Pages::%discord id of event-member%::%discord id of event-guild%}
+    set {_r::1} to new components row
+    if {_page} < 2:
+        add new disabled primary button with id "hfriends-%discord id of event-member%-back" named " " with emote "arrow_left" to components of {_r::1}
+    else:
+        add new primary button with id "hfriends-%discord id of event-member%-back" named " " with emote "arrow_left" to components of {_r::1}
+
+    add new disabled secondary button with id "hfriends-%discord id of event-member%-pageamt" named "Page %{friends.CurrentPage::%discord id of event-member%::%discord id of event-guild%}%/%{_pgs}%" to components of {_r::1}
+
+    if {_page} = {_pgs}:
+        add new disabled primary button with id "hfriends-%discord id of event-member%-next" named " " with emote "arrow_right" to components of {_r::1}
+    else:
+        add new primary button with id "hfriends-%discord id of event-member%-next" named " " with emote "arrow_right" to components of {_r::1}
+
+    set {_r::2} to new components row
+    add new success button with id "hfriends-%discord id of event-member%-custompagenum" named "Enter Page Number" to components of {_r::2}
+
+        
+
+    make embed:
+        set title of the embed to "Hypixel - Friends list of %{_info::1}%"
+        set description of the embed to "%join {_dis::%discord id of event-member%::*} with nl%"
+        set footer of the embed to "They have %{_s}% friends. Finished action in %System.currentTimeMillis()-{_n1}%ms."
+        set embed color of the embed to lime
+    edit {friends.Embed::%discord id of event-member%::%discord id of event-guild%} with last embed with components {_r::*}
+    stop
+
+function hypixel_getflag(c: string) :: string:
+    return ":flag_gb: English" if {_c} = "english"
+    return ":flag_cn: Chinese (Simplified)" if {_c} = "CHINESE_SIMPLIFIED"
+    return ":flag_cn: Chinese (Traditional)" if {_c} = "CHINISE_TRADITIONAL"
+    return ":flag_cz: Czech" if {_c} = "CZECH"
+    return ":flag_nl: Dutch" if {_c} = "DUTCH"
+    return ":flag_fi: Finnish" if {_c} = "FINNISH"
+    return ":flag_fr: French" if {_c} = "FRENCH"
+    return ":flag_de: German" if {_c} = "GERMAN"
+    return ":flag_gr: Greek" if {_c} = "GREEK"
+    return ":flag_it: Italian" if {_c} = "ITALIAN"
+    return ":flag_jp: Japanese" if {_c} = "JAPANESE"
+    return ":flag_kr: Korean" if {_c} = "KOREAN"
+    return ":flag_no: Norwegian" if {_c} = "NORWEGIAN"
+    return ":pirate_flag: (Pirate Speak)" if {_c} = "PIRATE"
+    return ":flag_pl: Polish" if {_c} = "POLISH"
+    return ":flag_pt: Portuguese (Portugal)" if {_c} = "PORTUGUESE_PT"
+    return ":flag_br: Portuguese (Brazil)" if {_c} = "PORTUGUESE_BR"
+    return ":flag_ru: Russian" if {_c} = "RUSSIAN"
+    return ":flag_es: Spanish" if {_c} = "SPANISH"
+    return ":flag_tr: Turkish" if {_c} = "TURKISH"
+    return ":flag_ua: Ukranian" if {_c} = "UKRAINIAN"
+
+on slash command:
+    event-string = "hypixel/info"
+
+    set {_n1} to System.currentTimeMillis()
+
+    set {_p} to argument "player" as string
+
+    make embed:
+        set title of the embed to "<a:distune_loading:1006642541996814336> Checking Hypixel info of %{_p}%..."
+        delete {_prog::*}
+        add "<a:distune_loading:1006642541996814336> Getting account UUID from Mojang API..." to {_prog::*}
+        add "<a:distune_loading:1006642541996814336> Getting information from Hypixel API..." to {_prog::*}
+        set description of the embed to "%join {_prog::*} with nl%"
+        set embed color of the embed to yellow
+    reply with last embed and store it in {info.Embed::%discord id of event-member%}
+
+    set {_b} to text from url "https://api.minetools.eu/uuid/%{_p}%"
+    copy json {_b} to {_json::*}
+
+    if {_json::status} = "ERR":
+        make embed:
+            set title of the embed to ":x: Checking Hypixel info of %{_p}%..."
+            delete {_prog::*}
+            add ":x: Getting account UUID from Mojang API..." to {_prog::*}
+            add ":x: Getting information from Hypixel API..." to {_prog::*}
+            set description of the embed to "%join {_prog::*} with nl%"
+            set embed color of the embed to red
+        edit {info.Embed::%discord id of event-member%} with last embed
+        delete {info.Embed::%discord id of event-member%}
+        stop
+    
+    make embed:
+        set title of the embed to "<a:distune_loading:1006642541996814336> Checking Hypixel info of %{_p}%..."
+        delete {_prog::*}
+        add ":white_check_mark: Got account from Mojang API. (Proper Username: %{_json::name}%)" to {_prog::*}
+        add "<a:distune_loading:1006642541996814336> Getting information from Hypixel API..." to {_prog::*}
+        set description of the embed to "%join {_prog::*} with nl%"
+        set embed color of the embed to yellow
+    edit {info.Embed::%discord id of event-member%} with last embed
+
+    set {_b2} to text from url "https://api.hypixel.net/player?key=%{apiKey}%&uuid=%{_json::id}%"
+    copy json {_b2} to {_json2::*}
+
+    make embed:
+        set title of the embed to ":white_check_mark: Checking Hypixel info of %{_p}%..."
+        delete {_prog::*}
+        add ":white_check_mark: Got account from Mojang API. (Proper Username: %{_json::name}%)" to {_prog::*}
+        add ":white_check_mark: Got information from Hypixel API, will display it in a second..." to {_prog::*}
+        set description of the embed to "%join {_prog::*} with nl%"
+        set embed color of the embed to lime
+    edit {info.Embed::%discord id of event-member%} with last embed
+
+    wait 1 second
+
+    loop {_json2::player::knownAliases::*}:
+        add noFormat(loop-value) to {_aka::*}
+
+    set {_r} to new components row
+    set {_dd} to new dropdown with id "hinfo-%discord id of event-member%-dd"
+    dropdownMinMax({_dd}, 1, 1)
+
+    add new option with value "hinfo-bedwars" named "BedWars" with description "Click here to get BedWars stats." with emote "bed" to options of {_dd}
+    add new option with value "hinfo-skywars" named "SkyWars" with description "Click here to get SkyWars stats." with emote "island" to options of {_dd}
+
+    add {_dd} to components of {_r}
+
+    set {info.Info::%discord id of event-member%} to "%{_json::name}%;%{_json::id}%"
+
+    make embed:
+        set title of the embed to "Hypixel - Information about %{_json::name}% - General"
+        set thumbnail of the embed to "https://minotar.net/helm/%{_json::id}%/100.png"
+        add field named "Login Information" with value "**First login:** <t:%floor({_json2::player::firstLogin}/1000)%> (<t:%floor({_json2::player::firstLogin}/1000)%:R>)%nl%**Last login:** <t:%floor({_json2::player::lastLogin}/1000)%> (<t:%floor({_json2::player::lastLogin}/1000)%:R>)%nl%**Last logout:** <t:%floor({_json2::player::lastLogout}/1000)%> (<t:%floor({_json2::player::lastLogout}/1000)%:R>)" to embed
+        add inline field named "Also known as" with value "%join {_aka::*} with nl%" to embed
+        add inline field named "Points" with value "**Achivement points:** %{_json2::player::achievementPoints}% points%nl%**Karma:** %{_json2::player::karma}%" to embed
+        add field named "~~---------------------------------------~~" with value " " to embed
+        add inline field named "Language" with value "%hypixel_getflag({_json2::player::userLanguage})%" to embed
+
+        set embed color of the embed to lime
+        set footer of the embed to "Got information in %System.currentTimeMillis()-{_n1}%ms."
+    edit {info.Embed::%discord id of event-member%} with last embed with components {_r}
+    stop
+
+on dropdown click:
+    event-string contains "hinfo"
+    set {_s::*} to split event-string at "-"
+    if discord id of event-member != {_s::2}:
+        reply with hidden ":x: This is not your Hypixel Info session."
+        stop
+    
+    if {_s::3} = "dd":
+        set {_sv::*} to split "%selected values%" at "-"
+        if {_sv::2} = "bedwars":
+            defer the interaction
+            set {_n1} to System.currentTimeMillis()
+            set {_i::*} to split {info.Info::%discord id of event-member%} at ";"
+            set {_p} to {_i::1}
+
+            make embed:
+                set title of the embed to "<a:distune_loading:1006642541996814336> Checking Hypixel BedWars info of %{_p}%..."
+                delete {_prog::*}
+                add "<a:distune_loading:1006642541996814336> Getting information from Hypixel API..." to {_prog::*}
+                set description of the embed to "%join {_prog::*} with nl%"
+                set embed color of the embed to yellow
+            edit {info.Embed::%discord id of event-member%} with last embed
+
+            set {_b} to text from url "https://api.hypixel.net/player?key=%{apiKey}%&uuid=%{_i::2}%"
+            copy json {_b} to {_json::*}
+
+            broadcast "%{_json::player::stats::Bedwars::*}%"
+
+            if {_json::player::stats::Bedwars::*} is not set:
+                make embed:
+                    set title of the embed to ":x: Checking Hypixel BedWars info of %{_p}%..."
+                    delete {_prog::*}
+                    add ":x: %{_p}% never played BedWars." to {_prog::*}
+                    set description of the embed to "%join {_prog::*} with nl%"
+                    set embed color of the embed to red
+                edit {info.Embed::%discord id of event-member%} with last embed
+                delete {info.Embed::%discord id of event-member%}
+                stop
+
+            set {_r} to new components row
+            set {_dd} to new dropdown with id "hinfo-%discord id of event-member%-inbedwars"
+            dropdownMinMax({_dd}, 1, 1)
+
+            add new option with value "hinfo-overall" named "Overall" with description "Gets overall stats for BedWars." with emote "trophy" to options of {_dd}
+            add new default option with value "hinfo-solo" named "Solo Stats" with description "Get stats for Solo BedWars." with emote "man" to options of {_dd}
+            add new option with value "hinfo-doubles" named "Doubles Stats" with description "Get stats for Doubles BedWars." with emote "family_man_boy" to options of {_dd}
+            add new option with value "hinfo-3v3" named "3v3 Stats" with description "Get stats for 3v3 BedWars." with emote "family_man_boy" to options of {_dd}
+            add new option with value "hinfo-4v4" named "4v4 Stats" with description "Get stats for 4v4 BedWars." with emote "family_mmbb" to options of {_dd}
+
+            add {_dd} to components of {_r}
+
+            make embed:
+                set title of the embed to ":white_check_mark: Checking Hypixel BedWars info of %{_p}%..."
+                delete {_prog::*}
+                add ":white_check_mark: Got information from Hypixel API, will display it in a second..." to {_prog::*}
+                set description of the embed to "%join {_prog::*} with nl%"
+                set embed color of the embed to lime
+            edit {info.Embed::%discord id of event-member%} with last embed
+
+            wait 1 second
+
+            make embed:
+                set title of the embed to "Hypixel - Information about %{_i::1}% - Solo BedWars"
+                set description of the embed to "Currently displaying information about **Solo BedWars**."
+                add inline field named "Wins & Losses :trophy:" with value "**Wins:** %{_json::player::stats::Bedwars::eight_one_wins_bedwars} ? 0%%nl%**Winstreak:** %{_json::player::stats::Bedwars::eight_one_winstreak} ? 0%%nl%**Losses:** %{_json::player::stats::Bedwars::eight_one_losses_bedwars} ? 0%%nl%**Win/Loss ratio (WLR):** %{_json::player::stats::Bedwars::eight_one_wins_bedwars}/{_json::player::stats::Bedwars::eight_one_losses_bedwars} ? 0%" to embed
+                add inline field named "Resource Collection" with value "**Items Purchased:** %{_json::player::stats::Bedwars::eight_one__items_purchased_bedwars} ? 0%%nl%**Iron:** %{_json::player::stats::Bedwars::eight_one_iron_resources_collected_bedwars} ? 0%%nl%**Gold:** %{_json::player::stats::Bedwars::eight_one_gold_resources_collected_bedwars} ? 0%%nl%**Diamond:** %{_json::player::stats::Bedwars::eight_one_diamond_resources_collected_bedwars} ? 0%%nl%**Emerald:** %{_json::player::stats::Bedwars::eight_one_emerald_resources_collected_bedwars} ? 0%" to embed
+                add inline field named "Beds" with value "**Beds Broken:** %{_json::player::stats::Bedwars::eight_one_beds_broken_bedwars} ? 0%%nl%**Beds Lost:** %{_json::player::stats::Bedwars::eight_one_beds_lost_bedwars} ? 0%%nl%**Bed broken/lost ratio (BBLR):** %{_json::player::stats::Bedwars::eight_one_beds_broken_bedwars}/{_json::player::stats::Bedwars::eight_one_beds_lost_bedwars} ? 0%" to embed
+                add inline field named "Kills" with value "**Final Kills:** %{_json::player::stats::Bedwars::eight_one_final_kills_bedwars} ? 0%%nl%**Final Deaths:** %{_json::player::stats::Bedwars::eight_one_final_deaths_bedwars} ? 0%%nl%**Final Kill/Death Ratio (FKDR):** %{_json::player::stats::Bedwars::eight_one_final_kills_bedwars}/{_json::player::stats::Bedwars::eight_one_final_deaths_bedwars} ? 0%%nl%%nl%**Kills:** %{_json::player::stats::Bedwars::eight_one_kills_bedwars} ? 0% (%{_json::player::stats::Bedwars::eight_one_void_kills_bedwars} ? 0% void kills)%nl%**Deaths:** %{_json::player::stats::Bedwars::eight_one_deaths_bedwars} ? 0%%nl%**Kill/Death ratio (KDR):** %{_json::player::stats::Bedwars::eight_one_kills_bedwars}/{_json::player::stats::Bedwars::eight_one_deaths_bedwars} ? 0%" to embed
+                add inline field named "Games Played" with value "**%{_json::player::stats::Bedwars::eight_one_games_played_bedwars} ? 0%** games" to embed
+
+                set embed color of the embed to lime
+                set footer of the embed to "Got information in %System.currentTimeMillis()-{_n1}%ms."
+            edit {info.Embed::%discord id of event-member%} with last embed with components {_r}
+            stop
+
+    if {_s::3} = "inbedwars":
+        set {_sv::*} to split "%selected values%" at "-"
+        if {_sv::2} = "overall":
+            defer the interaction
+            set {_n1} to System.currentTimeMillis()
+            set {_i::*} to split {info.Info::%discord id of event-member%} at ";"
+            set {_p} to {_i::1}
+
+            make embed:
+                set title of the embed to "<a:distune_loading:1006642541996814336> Checking Hypixel BedWars info of %{_p}%..."
+                delete {_prog::*}
+                add "<a:distune_loading:1006642541996814336> Getting information from Hypixel API..." to {_prog::*}
+                set description of the embed to "%join {_prog::*} with nl%"
+                set embed color of the embed to yellow
+            edit {info.Embed::%discord id of event-member%} with last embed
+
+            set {_b} to text from url "https://api.hypixel.net/player?key=%{apiKey}%&uuid=%{_i::2}%"
+            copy json {_b} to {_json::*}
+
+            broadcast "%{_json::player::stats::Bedwars::*}%"
+
+            if {_json::player::stats::Bedwars::*} is not set:
+                make embed:
+                    set title of the embed to ":x: Checking Hypixel BedWars info of %{_p}%..."
+                    delete {_prog::*}
+                    add ":x: %{_p}% never played BedWars." to {_prog::*}
+                    set description of the embed to "%join {_prog::*} with nl%"
+                    set embed color of the embed to red
+                edit {info.Embed::%discord id of event-member%} with last embed
+                delete {info.Embed::%discord id of event-member%}
+                stop
+
+            set {_r} to new components row
+            set {_dd} to new dropdown with id "hinfo-%discord id of event-member%-inbedwars"
+            dropdownMinMax({_dd}, 1, 1)
+
+            add new default option with value "hinfo-overall" named "Overall" with description "Gets overall stats for BedWars." with emote "trophy" to options of {_dd}
+            add new option with value "hinfo-solo" named "Solo Stats" with description "Get stats for Solo BedWars." with emote "man" to options of {_dd}
+            add new option with value "hinfo-doubles" named "Doubles Stats" with description "Get stats for Doubles BedWars." with emote "family_man_boy" to options of {_dd}
+            add new option with value "hinfo-3v3" named "3v3 Stats" with description "Get stats for 3v3 BedWars." with emote "family_man_boy" to options of {_dd}
+            add new option with value "hinfo-4v4" named "4v4 Stats" with description "Get stats for 4v4 BedWars." with emote "family_mmbb" to options of {_dd}
+
+            add {_dd} to components of {_r}
+
+            make embed:
+                set title of the embed to ":white_check_mark: Checking Hypixel BedWars info of %{_p}%..."
+                delete {_prog::*}
+                add ":white_check_mark: Got information from Hypixel API, will display it in a second..." to {_prog::*}
+                set description of the embed to "%join {_prog::*} with nl%"
+                set embed color of the embed to lime
+            edit {info.Embed::%discord id of event-member%} with last embed
+
+            wait 1 second
+
+            make embed:
+                set title of the embed to "Hypixel - Information about %{_i::1}% - BedWars"
+                set description of the embed to "Currently displaying information about **BedWars**."
+                add inline field named "Wins & Losses :trophy:" with value "**Wins:** %{_json::player::stats::Bedwars::wins_bedwars} ? 0%%nl%**Winstreak:** %{_json::player::stats::Bedwars::winstreak} ? 0%%nl%**Losses:** %{_json::player::stats::Bedwars::losses_bedwars} ? 0%%nl%**Win/Loss ratio (WLR):** %{_json::player::stats::Bedwars::wins_bedwars}/{_json::player::stats::Bedwars::losses_bedwars} ? 0%" to embed
+                add inline field named "Resource Collection" with value "**Items Purchased:** %{_json::player::stats::Bedwars::_items_purchased_bedwars} ? 0%%nl%**Iron:** %{_json::player::stats::Bedwars::iron_resources_collected_bedwars} ? 0%%nl%**Gold:** %{_json::player::stats::Bedwars::gold_resources_collected_bedwars} ? 0%%nl%**Diamond:** %{_json::player::stats::Bedwars::diamond_resources_collected_bedwars} ? 0%%nl%**Emerald:** %{_json::player::stats::Bedwars::emerald_resources_collected_bedwars} ? 0%" to embed
+                add inline field named "Beds" with value "**Beds Broken:** %{_json::player::stats::Bedwars::beds_broken_bedwars} ? 0%%nl%**Beds Lost:** %{_json::player::stats::Bedwars::beds_lost_bedwars} ? 0%%nl%**Bed broken/lost ratio (BBLR):** %{_json::player::stats::Bedwars::beds_broken_bedwars}/{_json::player::stats::Bedwars::beds_lost_bedwars} ? 0%" to embed
+                add inline field named "Kills" with value "**Final Kills:** %{_json::player::stats::Bedwars::final_kills_bedwars} ? 0%%nl%**Final Deaths:** %{_json::player::stats::Bedwars::final_deaths_bedwars} ? 0%%nl%**Final Kill/Death Ratio (FKDR):** %{_json::player::stats::Bedwars::final_kills_bedwars}/{_json::player::stats::Bedwars::final_deaths_bedwars} ? 0%%nl%%nl%**Kills:** %{_json::player::stats::Bedwars::kills_bedwars} ? 0% (%{_json::player::stats::Bedwars::void_kills_bedwars} ? 0% void kills)%nl%**Deaths:** %{_json::player::stats::Bedwars::deaths_bedwars} ? 0%%nl%**Kill/Death ratio (KDR):** %{_json::player::stats::Bedwars::kills_bedwars}/{_json::player::stats::Bedwars::deaths_bedwars} ? 0%" to embed
+                add inline field named "Games Played" with value "**%{_json::player::stats::Bedwars::games_played_bedwars} ? 0%** games" to embed
+                add inline field named "General" with value "**Coins:** %{_json::player::stats::Bedwars::coins} ? 0%%nl%**XP:** %{_json::player::stats::Bedwars::Experience} ? 0%%nl%**Unopened Loot Boxes:** %{_json::player::stats::Bedwars::bedwars_boxes} ? 0%%nl%**Opened loot boxes:** %{_json::player::stats::Bedwars::Bedwars_openedChests} ? 0%,%nl%**%{_json::player::stats::Bedwars::Bedwars_openedCommons} ? 0%** commons,%nl%**%{_json::player::stats::Bedwars::Bedwars_openedRares} ? 0%** rares,%nl%**%{_json::player::stats::Bedwars::Bedwars_openedEpics} ? 0%** epics,%nl%**%{_json::player::stats::Bedwars::Bedwars_openedLegendaries} ? 0%** legendaries" to embed
+
+                set embed color of the embed to lime
+                set footer of the embed to "Got information in %System.currentTimeMillis()-{_n1}%ms."
+            edit {info.Embed::%discord id of event-member%} with last embed with components {_r}
+            stop
+        
+        if {_sv::2} = "solo":
+            defer the interaction
+            set {_n1} to System.currentTimeMillis()
+            set {_i::*} to split {info.Info::%discord id of event-member%} at ";"
+            set {_p} to {_i::1}
+
+            make embed:
+                set title of the embed to "<a:distune_loading:1006642541996814336> Checking Hypixel BedWars info of %{_p}%..."
+                delete {_prog::*}
+                add "<a:distune_loading:1006642541996814336> Getting information from Hypixel API..." to {_prog::*}
+                set description of the embed to "%join {_prog::*} with nl%"
+                set embed color of the embed to yellow
+            edit {info.Embed::%discord id of event-member%} with last embed
+
+            set {_b} to text from url "https://api.hypixel.net/player?key=%{apiKey}%&uuid=%{_i::2}%"
+            copy json {_b} to {_json::*}
+
+            broadcast "%{_json::player::stats::Bedwars::*}%"
+
+            if {_json::player::stats::Bedwars::*} is not set:
+                make embed:
+                    set title of the embed to ":x: Checking Hypixel BedWars info of %{_p}%..."
+                    delete {_prog::*}
+                    add ":x: %{_p}% never played BedWars." to {_prog::*}
+                    set description of the embed to "%join {_prog::*} with nl%"
+                    set embed color of the embed to red
+                edit {info.Embed::%discord id of event-member%} with last embed
+                delete {info.Embed::%discord id of event-member%}
+                stop
+
+            set {_r} to new components row
+            set {_dd} to new dropdown with id "hinfo-%discord id of event-member%-inbedwars"
+            dropdownMinMax({_dd}, 1, 1)
+
+            add new option with value "hinfo-overall" named "Overall" with description "Gets overall stats for BedWars." with emote "trophy" to options of {_dd}
+            add new default option with value "hinfo-solo" named "Solo Stats" with description "Get stats for Solo BedWars." with emote "man" to options of {_dd}
+            add new option with value "hinfo-doubles" named "Doubles Stats" with description "Get stats for Doubles BedWars." with emote "family_man_boy" to options of {_dd}
+            add new option with value "hinfo-3v3" named "3v3 Stats" with description "Get stats for 3v3 BedWars." with emote "family_man_boy" to options of {_dd}
+            add new option with value "hinfo-4v4" named "4v4 Stats" with description "Get stats for 4v4 BedWars." with emote "family_mmbb" to options of {_dd}
+
+            add {_dd} to components of {_r}
+
+            make embed:
+                set title of the embed to ":white_check_mark: Checking Hypixel BedWars info of %{_p}%..."
+                delete {_prog::*}
+                add ":white_check_mark: Got information from Hypixel API, will display it in a second..." to {_prog::*}
+                set description of the embed to "%join {_prog::*} with nl%"
+                set embed color of the embed to lime
+            edit {info.Embed::%discord id of event-member%} with last embed
+
+            wait 1 second
+
+            make embed:
+                set title of the embed to "Hypixel - Information about %{_i::1}% - BedWars"
+                set description of the embed to "Currently displaying information about **BedWars**."
+                add inline field named "Wins & Losses :trophy:" with value "**Wins:** %{_json::player::stats::Bedwars::wins_bedwars} ? 0%%nl%**Winstreak:** %{_json::player::stats::Bedwars::winstreak} ? 0%%nl%**Losses:** %{_json::player::stats::Bedwars::losses_bedwars} ? 0%%nl%**Win/Loss ratio (WLR):** %{_json::player::stats::Bedwars::wins_bedwars}/{_json::player::stats::Bedwars::losses_bedwars} ? 0%" to embed
+                add inline field named "Resource Collection" with value "**Items Purchased:** %{_json::player::stats::Bedwars::_items_purchased_bedwars} ? 0%%nl%**Iron:** %{_json::player::stats::Bedwars::iron_resources_collected_bedwars} ? 0%%nl%**Gold:** %{_json::player::stats::Bedwars::gold_resources_collected_bedwars} ? 0%%nl%**Diamond:** %{_json::player::stats::Bedwars::diamond_resources_collected_bedwars} ? 0%%nl%**Emerald:** %{_json::player::stats::Bedwars::emerald_resources_collected_bedwars} ? 0%" to embed
+                add inline field named "Beds" with value "**Beds Broken:** %{_json::player::stats::Bedwars::beds_broken_bedwars} ? 0%%nl%**Beds Lost:** %{_json::player::stats::Bedwars::beds_lost_bedwars} ? 0%%nl%**Bed broken/lost ratio (BBLR):** %{_json::player::stats::Bedwars::beds_broken_bedwars}/{_json::player::stats::Bedwars::beds_lost_bedwars} ? 0%" to embed
+                add inline field named "Kills" with value "**Final Kills:** %{_json::player::stats::Bedwars::final_kills_bedwars} ? 0%%nl%**Final Deaths:** %{_json::player::stats::Bedwars::final_deaths_bedwars} ? 0%%nl%**Final Kill/Death Ratio (FKDR):** %{_json::player::stats::Bedwars::final_kills_bedwars}/{_json::player::stats::Bedwars::final_deaths_bedwars} ? 0%%nl%%nl%**Kills:** %{_json::player::stats::Bedwars::kills_bedwars} ? 0% (%{_json::player::stats::Bedwars::void_kills_bedwars} ? 0% void kills)%nl%**Deaths:** %{_json::player::stats::Bedwars::deaths_bedwars} ? 0%%nl%**Kill/Death ratio (KDR):** %{_json::player::stats::Bedwars::kills_bedwars}/{_json::player::stats::Bedwars::deaths_bedwars} ? 0%" to embed
+                add inline field named "Games Played" with value "**%{_json::player::stats::Bedwars::games_played_bedwars} ? 0%** games" to embed
+
+                set embed color of the embed to lime
+                set footer of the embed to "Got information in %System.currentTimeMillis()-{_n1}%ms."
+            edit {info.Embed::%discord id of event-member%} with last embed with components {_r}
+            stop
+        
+        if {_sv::2} = "doubles":
+            defer the interaction
+            set {_n1} to System.currentTimeMillis()
+            set {_i::*} to split {info.Info::%discord id of event-member%} at ";"
+            set {_p} to {_i::1}
+
+            make embed:
+                set title of the embed to "<a:distune_loading:1006642541996814336> Checking Hypixel BedWars info of %{_p}%..."
+                delete {_prog::*}
+                add "<a:distune_loading:1006642541996814336> Getting information from Hypixel API..." to {_prog::*}
+                set description of the embed to "%join {_prog::*} with nl%"
+                set embed color of the embed to yellow
+            edit {info.Embed::%discord id of event-member%} with last embed
+
+            set {_b} to text from url "https://api.hypixel.net/player?key=%{apiKey}%&uuid=%{_i::2}%"
+            copy json {_b} to {_json::*}
+
+            broadcast "%{_json::player::stats::Bedwars::*}%"
+
+            if {_json::player::stats::Bedwars::*} is not set:
+                make embed:
+                    set title of the embed to ":x: Checking Hypixel BedWars info of %{_p}%..."
+                    delete {_prog::*}
+                    add ":x: %{_p}% never played BedWars." to {_prog::*}
+                    set description of the embed to "%join {_prog::*} with nl%"
+                    set embed color of the embed to red
+                edit {info.Embed::%discord id of event-member%} with last embed
+                delete {info.Embed::%discord id of event-member%}
+                stop
+
+            set {_r} to new components row
+            set {_dd} to new dropdown with id "hinfo-%discord id of event-member%-inbedwars"
+            dropdownMinMax({_dd}, 1, 1)
+
+            add new option with value "hinfo-overall" named "Overall" with description "Gets overall stats for BedWars." with emote "trophy" to options of {_dd}
+            add new option with value "hinfo-solo" named "Solo Stats" with description "Get stats for Solo BedWars." with emote "man" to options of {_dd}
+            add new default option with value "hinfo-doubles" named "Doubles Stats" with description "Get stats for Doubles BedWars." with emote "family_man_boy" to options of {_dd}
+            add new option with value "hinfo-3v3" named "3v3 Stats" with description "Get stats for 3v3 BedWars." with emote "family_man_boy" to options of {_dd}
+            add new option with value "hinfo-4v4" named "4v4 Stats" with description "Get stats for 4v4 BedWars." with emote "family_mmbb" to options of {_dd}
+
+            add {_dd} to components of {_r}
+
+            make embed:
+                set title of the embed to ":white_check_mark: Checking Hypixel BedWars info of %{_p}%..."
+                delete {_prog::*}
+                add ":white_check_mark: Got information from Hypixel API, will display it in a second..." to {_prog::*}
+                set description of the embed to "%join {_prog::*} with nl%"
+                set embed color of the embed to lime
+            edit {info.Embed::%discord id of event-member%} with last embed
+
+            wait 1 second
+
+            make embed:
+                set title of the embed to "Hypixel - Information about %{_i::1}% - Doubles BedWars"
+                set description of the embed to "Currently displaying information about **Doubles BedWars**."
+                add inline field named "Wins & Losses :trophy:" with value "**Wins:** %{_json::player::stats::Bedwars::eight_two_wins_bedwars} ? 0%%nl%**Winstreak:** %{_json::player::stats::Bedwars::eight_two_winstreak} ? 0%%nl%**Losses:** %{_json::player::stats::Bedwars::eight_two_losses_bedwars} ? 0%%nl%**Win/Loss ratio (WLR):** %{_json::player::stats::Bedwars::eight_two_wins_bedwars}/{_json::player::stats::Bedwars::eight_two_losses_bedwars} ? 0%" to embed
+                add inline field named "Resource Collection" with value "**Items Purchased:** %{_json::player::stats::Bedwars::eight_two__items_purchased_bedwars} ? 0%%nl%**Iron:** %{_json::player::stats::Bedwars::eight_two_iron_resources_collected_bedwars} ? 0%%nl%**Gold:** %{_json::player::stats::Bedwars::eight_two_gold_resources_collected_bedwars} ? 0%%nl%**Diamond:** %{_json::player::stats::Bedwars::eight_two_diamond_resources_collected_bedwars} ? 0%%nl%**Emerald:** %{_json::player::stats::Bedwars::eight_two_emerald_resources_collected_bedwars} ? 0%" to embed
+                add inline field named "Beds" with value "**Beds Broken:** %{_json::player::stats::Bedwars::eight_two_beds_broken_bedwars} ? 0%%nl%**Beds Lost:** %{_json::player::stats::Bedwars::eight_two_beds_lost_bedwars} ? 0%%nl%**Bed broken/lost ratio (BBLR):** %{_json::player::stats::Bedwars::eight_two_beds_broken_bedwars}/{_json::player::stats::Bedwars::eight_two_beds_lost_bedwars} ? 0%" to embed
+                add inline field named "Kills" with value "**Final Kills:** %{_json::player::stats::Bedwars::eight_two_final_kills_bedwars} ? 0%%nl%**Final Deaths:** %{_json::player::stats::Bedwars::eight_two_final_deaths_bedwars} ? 0%%nl%**Final Kill/Death Ratio (FKDR):** %{_json::player::stats::Bedwars::eight_two_final_kills_bedwars}/{_json::player::stats::Bedwars::eight_two_final_deaths_bedwars} ? 0%%nl%%nl%**Kills:** %{_json::player::stats::Bedwars::eight_two_kills_bedwars} ? 0% (%{_json::player::stats::Bedwars::eight_two_void_kills_bedwars} ? 0% void kills)%nl%**Deaths:** %{_json::player::stats::Bedwars::eight_two_deaths_bedwars} ? 0%%nl%**Kill/Death ratio (KDR):** %{_json::player::stats::Bedwars::eight_two_kills_bedwars}/{_json::player::stats::Bedwars::eight_two_deaths_bedwars} ? 0%" to embed
+                add inline field named "Games Played" with value "**%{_json::player::stats::Bedwars::eight_two_games_played_bedwars} ? 0%** games" to embed
+
+                set embed color of the embed to lime
+                set footer of the embed to "Got information in %System.currentTimeMillis()-{_n1}%ms."
+            edit {info.Embed::%discord id of event-member%} with last embed with components {_r}
+            stop
+        
+        if {_sv::2} = "3v3":
+            defer the interaction
+            set {_n1} to System.currentTimeMillis()
+            set {_i::*} to split {info.Info::%discord id of event-member%} at ";"
+            set {_p} to {_i::1}
+
+            make embed:
+                set title of the embed to "<a:distune_loading:1006642541996814336> Checking Hypixel BedWars info of %{_p}%..."
+                delete {_prog::*}
+                add "<a:distune_loading:1006642541996814336> Getting information from Hypixel API..." to {_prog::*}
+                set description of the embed to "%join {_prog::*} with nl%"
+                set embed color of the embed to yellow
+            edit {info.Embed::%discord id of event-member%} with last embed
+
+            set {_b} to text from url "https://api.hypixel.net/player?key=%{apiKey}%&uuid=%{_i::2}%"
+            copy json {_b} to {_json::*}
+
+            broadcast "%{_json::player::stats::Bedwars::*}%"
+
+            if {_json::player::stats::Bedwars::*} is not set:
+                make embed:
+                    set title of the embed to ":x: Checking Hypixel BedWars info of %{_p}%..."
+                    delete {_prog::*}
+                    add ":x: %{_p}% never played BedWars." to {_prog::*}
+                    set description of the embed to "%join {_prog::*} with nl%"
+                    set embed color of the embed to red
+                edit {info.Embed::%discord id of event-member%} with last embed
+                delete {info.Embed::%discord id of event-member%}
+                stop
+
+            set {_r} to new components row
+            set {_dd} to new dropdown with id "hinfo-%discord id of event-member%-inbedwars"
+            dropdownMinMax({_dd}, 1, 1)
+
+            add new option with value "hinfo-overall" named "Overall" with description "Gets overall stats for BedWars." with emote "trophy" to options of {_dd}
+            add new option with value "hinfo-solo" named "Solo Stats" with description "Get stats for Solo BedWars." with emote "man" to options of {_dd}
+            add new option with value "hinfo-doubles" named "Doubles Stats" with description "Get stats for Doubles BedWars." with emote "family_man_boy" to options of {_dd}
+            add new default option with value "hinfo-3v3" named "3v3 Stats" with description "Get stats for 3v3 BedWars." with emote "family_man_boy" to options of {_dd}
+            add new option with value "hinfo-4v4" named "4v4 Stats" with description "Get stats for 4v4 BedWars." with emote "family_mmbb" to options of {_dd}
+
+            add {_dd} to components of {_r}
+
+            make embed:
+                set title of the embed to ":white_check_mark: Checking Hypixel BedWars info of %{_p}%..."
+                delete {_prog::*}
+                add ":white_check_mark: Got information from Hypixel API, will display it in a second..." to {_prog::*}
+                set description of the embed to "%join {_prog::*} with nl%"
+                set embed color of the embed to lime
+            edit {info.Embed::%discord id of event-member%} with last embed
+
+            wait 1 second
+
+            make embed:
+                set title of the embed to "Hypixel - Information about %{_i::1}% - 3v3 BedWars"
+                set description of the embed to "Currently displaying information about **3v3 BedWars**."
+                add inline field named "Wins & Losses :trophy:" with value "**Wins:** %{_json::player::stats::Bedwars::four_three_wins_bedwars} ? 0%%nl%**Winstreak:** %{_json::player::stats::Bedwars::four_three_winstreak} ? 0%%nl%**Losses:** %{_json::player::stats::Bedwars::four_three_losses_bedwars} ? 0%%nl%**Win/Loss ratio (WLR):** %{_json::player::stats::Bedwars::four_three_wins_bedwars}/{_json::player::stats::Bedwars::four_three_losses_bedwars} ? 0%" to embed
+                add inline field named "Resource Collection" with value "**Items Purchased:** %{_json::player::stats::Bedwars::four_three__items_purchased_bedwars} ? 0%%nl%**Iron:** %{_json::player::stats::Bedwars::four_three_iron_resources_collected_bedwars} ? 0%%nl%**Gold:** %{_json::player::stats::Bedwars::four_three_gold_resources_collected_bedwars} ? 0%%nl%**Diamond:** %{_json::player::stats::Bedwars::four_three_diamond_resources_collected_bedwars} ? 0%%nl%**Emerald:** %{_json::player::stats::Bedwars::four_three_emerald_resources_collected_bedwars} ? 0%" to embed
+                add inline field named "Beds" with value "**Beds Broken:** %{_json::player::stats::Bedwars::four_three_beds_broken_bedwars} ? 0%%nl%**Beds Lost:** %{_json::player::stats::Bedwars::four_three_beds_lost_bedwars} ? 0%%nl%**Bed broken/lost ratio (BBLR):** %{_json::player::stats::Bedwars::four_three_beds_broken_bedwars}/{_json::player::stats::Bedwars::four_three_beds_lost_bedwars} ? 0%" to embed
+                add inline field named "Kills" with value "**Final Kills:** %{_json::player::stats::Bedwars::four_three_final_kills_bedwars} ? 0%%nl%**Final Deaths:** %{_json::player::stats::Bedwars::four_three_final_deaths_bedwars} ? 0%%nl%**Final Kill/Death Ratio (FKDR):** %{_json::player::stats::Bedwars::four_three_final_kills_bedwars}/{_json::player::stats::Bedwars::four_three_final_deaths_bedwars} ? 0%%nl%%nl%**Kills:** %{_json::player::stats::Bedwars::four_three_kills_bedwars} ? 0% (%{_json::player::stats::Bedwars::four_three_void_kills_bedwars} ? 0% void kills)%nl%**Deaths:** %{_json::player::stats::Bedwars::four_three_deaths_bedwars} ? 0%%nl%**Kill/Death ratio (KDR):** %{_json::player::stats::Bedwars::four_three_kills_bedwars}/{_json::player::stats::Bedwars::four_three_deaths_bedwars} ? 0%" to embed
+                add inline field named "Games Played" with value "**%{_json::player::stats::Bedwars::four_three_games_played_bedwars} ? 0%** games" to embed
+
+                set embed color of the embed to lime
+                set footer of the embed to "Got information in %System.currentTimeMillis()-{_n1}%ms."
+            edit {info.Embed::%discord id of event-member%} with last embed with components {_r}
+            stop
+        
+        if {_sv::2} = "4v4":
+            defer the interaction
+            set {_n1} to System.currentTimeMillis()
+            set {_i::*} to split {info.Info::%discord id of event-member%} at ";"
+            set {_p} to {_i::1}
+
+            make embed:
+                set title of the embed to "<a:distune_loading:1006642541996814336> Checking Hypixel BedWars info of %{_p}%..."
+                delete {_prog::*}
+                add "<a:distune_loading:1006642541996814336> Getting information from Hypixel API..." to {_prog::*}
+                set description of the embed to "%join {_prog::*} with nl%"
+                set embed color of the embed to yellow
+            edit {info.Embed::%discord id of event-member%} with last embed
+
+            set {_b} to text from url "https://api.hypixel.net/player?key=%{apiKey}%&uuid=%{_i::2}%"
+            copy json {_b} to {_json::*}
+
+            broadcast "%{_json::player::stats::Bedwars::*}%"
+
+            if {_json::player::stats::Bedwars::*} is not set:
+                make embed:
+                    set title of the embed to ":x: Checking Hypixel BedWars info of %{_p}%..."
+                    delete {_prog::*}
+                    add ":x: %{_p}% never played BedWars." to {_prog::*}
+                    set description of the embed to "%join {_prog::*} with nl%"
+                    set embed color of the embed to red
+                edit {info.Embed::%discord id of event-member%} with last embed
+                delete {info.Embed::%discord id of event-member%}
+                stop
+
+            set {_r} to new components row
+            set {_dd} to new dropdown with id "hinfo-%discord id of event-member%-inbedwars"
+            dropdownMinMax({_dd}, 1, 1)
+
+            add new option with value "hinfo-overall" named "Overall" with description "Gets overall stats for BedWars." with emote "trophy" to options of {_dd}
+            add new option with value "hinfo-solo" named "Solo Stats" with description "Get stats for Solo BedWars." with emote "man" to options of {_dd}
+            add new option with value "hinfo-doubles" named "Doubles Stats" with description "Get stats for Doubles BedWars." with emote "family_man_boy" to options of {_dd}
+            add new option with value "hinfo-3v3" named "3v3 Stats" with description "Get stats for 3v3 BedWars." with emote "family_man_boy" to options of {_dd}
+            add new default option with value "hinfo-4v4" named "4v4 Stats" with description "Get stats for 4v4 BedWars." with emote "family_mmbb" to options of {_dd}
+
+            add {_dd} to components of {_r}
+
+            make embed:
+                set title of the embed to ":white_check_mark: Checking Hypixel BedWars info of %{_p}%..."
+                delete {_prog::*}
+                add ":white_check_mark: Got information from Hypixel API, will display it in a second..." to {_prog::*}
+                set description of the embed to "%join {_prog::*} with nl%"
+                set embed color of the embed to lime
+            edit {info.Embed::%discord id of event-member%} with last embed
+
+            wait 1 second
+
+            make embed:
+                set title of the embed to "Hypixel - Information about %{_i::1}% - 4v4 BedWars"
+                set description of the embed to "Currently displaying information about **4v4 BedWars**."
+                add inline field named "Wins & Losses :trophy:" with value "**Wins:** %{_json::player::stats::Bedwars::four_four_wins_bedwars} ? 0%%nl%**Winstreak:** %{_json::player::stats::Bedwars::four_four_winstreak} ? 0%%nl%**Losses:** %{_json::player::stats::Bedwars::four_four_losses_bedwars} ? 0%%nl%**Win/Loss ratio (WLR):** %{_json::player::stats::Bedwars::four_four_wins_bedwars}/{_json::player::stats::Bedwars::four_four_losses_bedwars} ? 0%" to embed
+                add inline field named "Resource Collection" with value "**Items Purchased:** %{_json::player::stats::Bedwars::four_four__items_purchased_bedwars} ? 0%%nl%**Iron:** %{_json::player::stats::Bedwars::four_four_iron_resources_collected_bedwars} ? 0%%nl%**Gold:** %{_json::player::stats::Bedwars::four_four_gold_resources_collected_bedwars} ? 0%%nl%**Diamond:** %{_json::player::stats::Bedwars::four_four_diamond_resources_collected_bedwars} ? 0%%nl%**Emerald:** %{_json::player::stats::Bedwars::four_four_emerald_resources_collected_bedwars} ? 0%" to embed
+                add inline field named "Beds" with value "**Beds Broken:** %{_json::player::stats::Bedwars::four_four_beds_broken_bedwars} ? 0%%nl%**Beds Lost:** %{_json::player::stats::Bedwars::four_four_beds_lost_bedwars} ? 0%%nl%**Bed broken/lost ratio (BBLR):** %{_json::player::stats::Bedwars::four_four_beds_broken_bedwars}/{_json::player::stats::Bedwars::four_four_beds_lost_bedwars} ? 0%" to embed
+                add inline field named "Kills" with value "**Final Kills:** %{_json::player::stats::Bedwars::four_four_final_kills_bedwars} ? 0%%nl%**Final Deaths:** %{_json::player::stats::Bedwars::four_four_final_deaths_bedwars} ? 0%%nl%**Final Kill/Death Ratio (FKDR):** %{_json::player::stats::Bedwars::four_four_final_kills_bedwars}/{_json::player::stats::Bedwars::four_four_final_deaths_bedwars} ? 0%%nl%%nl%**Kills:** %{_json::player::stats::Bedwars::four_four_kills_bedwars} ? 0% (%{_json::player::stats::Bedwars::four_four_void_kills_bedwars} ? 0% void kills)%nl%**Deaths:** %{_json::player::stats::Bedwars::four_four_deaths_bedwars} ? 0%%nl%**Kill/Death ratio (KDR):** %{_json::player::stats::Bedwars::four_four_kills_bedwars}/{_json::player::stats::Bedwars::four_four_deaths_bedwars} ? 0%" to embed
+                add inline field named "Games Played" with value "**%{_json::player::stats::Bedwars::four_four_games_played_bedwars} ? 0%** games" to embed
+
+                set embed color of the embed to lime
+                set footer of the embed to "Got information in %System.currentTimeMillis()-{_n1}%ms."
+            edit {info.Embed::%discord id of event-member%} with last embed with components {_r}
+            stop
