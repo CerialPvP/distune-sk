@@ -131,6 +131,13 @@ function newOption_Slash(v: object, n: string, d: string, t: string="string", o:
 		
 		else:
 			add mentionable option named "%{_n}%" with description "%{_d}%" to options of {_v}
+	
+	if {_t} = "attachment":
+		if {_o} = false:
+			add required attachment option named "%{_n}%" with description "%{_d}%" to options of {_v}
+		
+		else:
+			add attachment option named "%{_n}%" with description "%{_d}%" to options of {_v}
 
 # Subcommandsf
 
