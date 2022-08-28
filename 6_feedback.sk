@@ -1,0 +1,61 @@
+#! File automatically made in Discord by ! Cerial#2873! (8/5/22, 9:36 AM)
+
+options:
+    bot: "DisTune"
+
+
+    icon: "https://cdn.discordapp.com/attachments/809401069489750057/947037864120680458/distune-new.png"
+
+    color: rgb(47, 49, 54)
+
+on load:
+    set {_c} to newSlash("feedback", "Leave feedback about our bot!")
+
+    set {_fdbk::bug} to newSubCmd_Slash("bug", "Want to report a bug in the bot? This is the command.")
+
+    set {_fdbk::review} to newSubCmd_Slash("review", "Leave a review.")
+
+    add {_fdbk::*} to sub commands of {_c}
+
+    addSlash_Local({_c}, "feedback")
+
+on slash command:
+    event-string = "feedback/bug"
+
+    set {_m} to new modal with id "bugform" named "Report a Bug!"
+    set {_r} to new components row
+
+    set {_q::detail} to new text input with id "bugform-detail" named "Provide details about the bug."
+    set placeholder of {_q::detail} to "Provide information; e.g Screenshots, how to reproduce the bug and where it is happening."
+    set required state of {_q::detail} to true
+    set max range of {_q::detail} to 3000
+    set min range of {_q::detail} to 50
+    add {_q::detail} to components of {_r}
+
+    set components row of {_m} to {_r}
+
+    show {_m} to the user
+
+on modal receive:
+    event-string = "bugform"
+
+    set {_d::1} to value of text-input with id "bugform-detail"
+    replace all "`" in {_d::1} with ""
+
+    make embed:
+        set title of the embed to "Form submitted!"
+        set description of the embed to "Your bug form has been submitted to the DisTune staff. They will look at it shortly.%nl%The information you've provided: ```%nl%%{_d::1}% ```"
+        set embed color of the embed to lime
+    reply with hidden last embed
+
+    wait 1 tick
+
+    set {_c} to channel with id "1006648879367856338"
+    broadcast "%{_c}%"
+
+    make embed:
+        set title of the embed to "New bug report!"
+        set description of the embed to "The following bug report has been submitted:%nl%`●` Submitter: %mention tag of event-member% (%event-member%, %discord id of event-member%)%nl%`●` Provided information: ```%nl%%{_d::1}% ```"
+        set embed color of the embed to yellow
+    post last embed to {_c}
+    stop
