@@ -147,7 +147,7 @@ function newSubCmd_Slash(n: string, d: string) :: object:
 
 function newSubGroup_Slash(n: string, d: string) :: object:
 	set {_r} to new slash command group named {_n} with description {_d}
-	return {_r}
+	return {_r} # t
 
 function groupSub_Slash(c: object, s: object):
 	add {_s} to sub commands of {_c}
