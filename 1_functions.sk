@@ -25,7 +25,7 @@ function newSlash(n: string, d: string) :: object:
 
 # Options editor
 
-function newOption_Slash_Set(v: object, n: string, d: string, t: string="string", o: boolean=false) :: object:
+function newOption_Slash_Set(v: object, n: string, d: string, t: string="string", o: boolean=false) :: slashoption:
 	if {_t} = "string":
 		if {_o} = false:
 			add required string option named "%{_n}%" with description "%{_d}%" to options of {_v}
@@ -143,6 +143,10 @@ function newOption_Slash(v: object, n: string, d: string, t: string="string", o:
 
 function newSubCmd_Slash(n: string, d: string) :: object:
 	set {_r} to new sub command named {_n} with description {_d}
+	return {_r}
+
+function newSubGroup_Slash(n: string, d: string) :: object:
+	set {_r} to new slash command group named {_n} with description {_d}
 	return {_r}
 
 function groupSub_Slash(c: object, s: object):
