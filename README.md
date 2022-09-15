@@ -1,3 +1,3 @@
-## DisTune
+## DisTune (Skript/DiSky version)
 
-This is where DisTune's code is at. You can go ahead and read the code, and if you want make a PR with your improvements and I might merge it.
+DisTune is moving off of Skript because skript isn't too good. We have moved to discord.js, and if you want to see the latest source code, visit the **master** branch.
